@@ -13,13 +13,14 @@ class CookieSessionView(View):
             data = json.loads(request.body)
             channel = data.get('channel')
             credential_name = data.get('credential_name')
+            password = data.get('password')
             browser = data.get('browser')
 
             if not channel or not credential_name:
                 return JsonResponse({'error': 'Missing required parameters: channel and credential_name'}, status=400)
         
             try:
-                CookieSession.start_session(browser=browser, channel=channel, credential_name=credential_name)
+                CookieSession.start_session(browser=browser, channel=channel, credential_name=credential_name, password=password)
                 return JsonResponse({'message': f'Session started successfully for {channel} - {credential_name}'}, status=200)
 
             except Exception as e:

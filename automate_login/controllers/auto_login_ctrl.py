@@ -10,82 +10,93 @@ class AutomateLoginView (View) :
     @csrf_exempt
     def agoda_login_view(request):
         if request.method == 'POST':
-          
             data = json.loads(request.body)
-            # Extract the credentials and browser from the request
             username = data.get('username')
             password = data.get('password')
             channel_id = data.get('channel_id')
-            reservation_id = data.get('reservation_id')
-            browser = 'Firefox'  
+            reservations = data.get('reservation_id')
+            channel_name = data.get('channel')
+            browser = data.get('browser')
 
-            if not all([username, password, channel_id, reservation_id]):
+            if not all([username, password, channel_name, channel_id, reservations]):
                 return JsonResponse({"error": "Missing required parameters"}, status=400)
 
-            # Create a CredentialDTO object
-            credential = CredentialDTO(username=username, password=password, channel_id=channel_id, reservation_id=reservation_id)
-        
+            credential = CredentialDTO(
+                username = username, 
+                password = password, 
+                channel_name = channel_name, 
+                channel_id = channel_id, 
+                reservations = reservations
+            )
+
             try:
-                # Call the agoda_login method from AutoLoginService
-                AutoLoginService.agoda_login(browser=browser, credential=credential)
+                AutoLoginService.agoda_login(browser=browser, credential=credential, reservations=reservations)
                 return JsonResponse({"message": "Login and message sending successful"})
-        
+            
             except Exception as e:
                 return JsonResponse({"error": str(e)}, status=500)
 
-        return HttpResponse(status=405)  # Method not allowed if not a POST request
+        return HttpResponse(status=405)
 
     @csrf_exempt
     def airbnb_login_view(request):
         if request.method == 'POST':
             data = json.loads(request.body)
-            # Extract the credentials and browser from the request
             username = data.get('username')
             password = data.get('password')
             channel_id = data.get('channel_id')
-            reservation_id = data.get('reservation_id')
-            browser = 'Firefox'
-        
-            if not all([username, password, channel_id, reservation_id]):
+            reservations = data.get('reservation_id')
+            channel_name = data.get('channel')
+            browser = data.get('browser')
+
+            if not all([username, password, channel_name, channel_id, reservations]):
                 return JsonResponse({"error": "Missing required parameters"}, status=400)
 
-            # Create a CredentialDTO object
-            credential = CredentialDTO(username=username, password=password, channel_id=channel_id, reservation_id=reservation_id)
+            credential = CredentialDTO(
+                username = username, 
+                password = password, 
+                channel_name = channel_name, 
+                channel_id = channel_id, 
+                reservations = reservations
+            )
         
             try:
-                # Call the airbnb_login method from AutoLoginService
                 AutoLoginService.airbnb_login(browser=browser, credential=credential)
-                return JsonResponse({"message": "Login successful"})
-        
+                return JsonResponse({"message": "Login and message sending successful"})
+            
             except Exception as e:
                 return JsonResponse({"error": str(e)}, status=500)
 
-        return HttpResponse(status=405)  # Method not allowed if not a POST request
+        return HttpResponse(status=405)
 
     @csrf_exempt
     def rakuten_login_view(request):
         if request.method == 'POST':
             data = json.loads(request.body)
-            # Extract the credentials and browser from the request
             username = data.get('username')
             password = data.get('password')
             channel_id = data.get('channel_id')
-            reservation_id = data.get('reservation_id')
-            browser = 'Firefox'
-        
-            if not all([username, password, channel_id, reservation_id]):
+            reservations = data.get('reservation_id')
+            channel_name = data.get('channel')
+            browser = data.get('browser')
+
+            if not all([username, password, channel_name, channel_id, reservations]):
                 return JsonResponse({"error": "Missing required parameters"}, status=400)
 
-            # Create a CredentialDTO object
-            credential = CredentialDTO(username=username, password=password, channel_id=channel_id, reservation_id=reservation_id)
-        
+            credential = CredentialDTO(
+                username = username, 
+                password = password, 
+                channel_name = channel_name, 
+                channel_id = channel_id, 
+                reservations = reservations
+            )
+
             try:
-                # Call the rakuten_login method from AutoLoginService
                 AutoLoginService.rakuten_login(browser=browser, credential=credential)
-                return JsonResponse({"message": "Login successful"})
-        
+                return JsonResponse({"message": "Login and message sending successful"})
+            
             except Exception as e:
                 return JsonResponse({"error": str(e)}, status=500)
 
-        return HttpResponse(status=405)  # Method not allowed if not a POST request
+        return HttpResponse(status=405)
     
