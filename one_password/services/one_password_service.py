@@ -1,18 +1,26 @@
+from onepassword import *
 from django.conf import settings
 import requests
 
+
 class OnePasswordSecret :
-    def get_1password_secret(item_id):
-        url = f"{settings.OP_CONNECT_URL}/v1/items/{item_id}"
+
+    def get_one_password_secret (secret_name):
+        token = settings.OP_SERVICE_ACCOUNT_TOKEN
+        url = settings.OP_CONNECT_URL + secret_name
+
         headers = {
-            'Authorization': f'Bearer {settings.OP_API_KEY}',
+            'Authorization': f'Bearer {token}'
         }
 
         response = requests.get(url, headers=headers)
 
         if response.status_code == 200:
-            data = response.json()
-            return data
+            secret = response.json()
+            return secret.get('value')
         else:
-            print(f"Failed to retrieve secret: {response.status_code}")
-            return None
+            raise Exception(f"Failed to retrieve secret")
+
+    
+    
+

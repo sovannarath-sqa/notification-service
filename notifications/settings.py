@@ -17,7 +17,8 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_COOKIES_PATH = os.path.join(BASE_DIR, 'web_cookies')
 OP_CONNECT_URL = os.getenv('OP_CONNECT_URL')
-OP_API_KEY = os.getenv('OP_API_KEY')  
+OP_API_KEY = os.getenv('OP_API_KEY')
+OP_SERVICE_ACCOUNT_TOKEN = os.getenv('OP_SERVICE_ACCOUNT_TOKEN')
 
 
 # Quick-start development settings - unsuitable for production
