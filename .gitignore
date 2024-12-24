@@ -1,0 +1,38 @@
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.pdb
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+
+# Django
+db.sqlite3
+*.sqlite3-journal
+media/
+staticfiles/
+
+# Environment variables
+.env
+
+# Virtual environment
+venv/
+env/
+.venv/
+.env.bak/
+env.bak/
+
+# Visual Studio Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Other
+*.bak
+*.swp
+*.swo
