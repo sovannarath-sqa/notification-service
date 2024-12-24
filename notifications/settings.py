@@ -17,7 +17,7 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_COOKIES_PATH = os.path.join(BASE_DIR, 'web_cookies')
 OP_CONNECT_HOST = os.getenv('OP_CONNECT_HOST')
-OP_API_KEY = os.getenv('OP_API_KEY')
+OP_API_TOKEN = os.getenv('OP_API_TOKEN')
 OP_SERVICE_ACCOUNT_TOKEN = os.getenv('OP_SERVICE_ACCOUNT_TOKEN')
 
 

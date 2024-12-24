@@ -4,37 +4,50 @@ import subprocess
 import requests
 import json
 
+class OnePasswordClient:
+    def __init__(self, host, token):
+        self.host = host
+        self.headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
 
-class OnePasswordSecret :
+    def list_item(self, vault_id):
+        url = f"{self.host}/v1/vaults/{vault_id}/items"
+        response = requests.get(url, headers=self.headers)
+        response.raise_for_status()
+        return response.json()
 
-    def get_one_password_secret (secret_name):
-        # token = settings.OP_SERVICE_ACCOUNT_TOKEN
-        # url = settings.OP_CONNECT_URL + secret_name
+    def get_item(self, vault_id, item_id):
+        url = f"{self.host}/v1/vaults/{vault_id}/items/{item_id}"
+        response = requests.get(url, headers=self.headers)
+        response.raise_for_status()
+        return response.json()
 
-        # print("Token: ", token)
-        # print("One password url: ", url)
+    def get_item_field(self, vault_id, item_id, field_label):
+        item = self.get_item(vault_id, item_id)
+        for field in item.get("fields", []):
+            if field.get("label") == field_label:
+                return field.get("value")
+        raise ValueError(f"Field '{field_label}' not found in item.")
 
-        # headers = {
-        #     'Authorization': f'Bearer {token}'
-        # }
 
-        # response = requests.get(url, headers=headers)
+class OnePasswordImplement :
 
-        # if response.status_code == 200:
-        #     secret = response.json()
-        #     return secret.get('value')
-        # else:
-        #     raise Exception(f"Failed to retrieve secret")
-        try:
-            # Get the 1Password item (the secret)
-            command = ["op", "item", "get", secret_name, "--format", "json"]
-            result = subprocess.run(command, capture_output=True, text=True, check=True)
-            secret_data = json.loads(result.stdout)
-            return secret_data
-        except subprocess.CalledProcessError as e:
-            print(f"Error fetching secret from 1Password: {e}")
-            return None
-
+    def __init__ (self) :
+        self.op_client = OnePasswordClient(settings.OP_CONNECT_HOST, settings.OP_API_TOKEN)
+        self.vault_id = "kdhewcrzpzqmwytjjhabiv4s4i"
+        self.item_id = "5pxqegb7lxvtwltemz3iell5rq"
+        self.field_label = "password"
     
-    
+    def get_list () : 
+        object = OnePasswordImplement()
+        return object.get_list(object.vault_id)
 
+    def get_secret () :
+        object = OnePasswordImplement()
+        return object.op_client.get_item_field(
+            object.vault_id, 
+            object.item_id, 
+            object.field_label
+        )
