@@ -1,25 +1,39 @@
 from onepassword import *
 from django.conf import settings
+import subprocess
 import requests
+import json
 
 
 class OnePasswordSecret :
 
     def get_one_password_secret (secret_name):
-        token = settings.OP_SERVICE_ACCOUNT_TOKEN
-        url = settings.OP_CONNECT_URL + secret_name
+        # token = settings.OP_SERVICE_ACCOUNT_TOKEN
+        # url = settings.OP_CONNECT_URL + secret_name
 
-        headers = {
-            'Authorization': f'Bearer {token}'
-        }
+        # print("Token: ", token)
+        # print("One password url: ", url)
 
-        response = requests.get(url, headers=headers)
+        # headers = {
+        #     'Authorization': f'Bearer {token}'
+        # }
 
-        if response.status_code == 200:
-            secret = response.json()
-            return secret.get('value')
-        else:
-            raise Exception(f"Failed to retrieve secret")
+        # response = requests.get(url, headers=headers)
+
+        # if response.status_code == 200:
+        #     secret = response.json()
+        #     return secret.get('value')
+        # else:
+        #     raise Exception(f"Failed to retrieve secret")
+        try:
+            # Get the 1Password item (the secret)
+            command = ["op", "item", "get", secret_name, "--format", "json"]
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            secret_data = json.loads(result.stdout)
+            return secret_data
+        except subprocess.CalledProcessError as e:
+            print(f"Error fetching secret from 1Password: {e}")
+            return None
 
     
     

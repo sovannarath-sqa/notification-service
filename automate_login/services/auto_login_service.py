@@ -94,6 +94,8 @@ class AutoLoginService :
         driver = AutoLoginService.Open_brower(browser=browser, channel=credential.channel)
         wait = WebDriverWait(driver, 10)
 
+        
+
         if AutoLoginService.load_session(driver=driver, channel=credential.channel, credential_name=credential.username) == False :
             time.sleep(3)
 

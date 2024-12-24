@@ -22,4 +22,5 @@ urlpatterns = [
     path('credentials/', include('credential.urls')),
     path('automates/', include('automate_login.urls')),
     path('cookie-session/', include('cookie_sessions.urls')),
+    path('one-password/', include('one_password.urls')),
 ]

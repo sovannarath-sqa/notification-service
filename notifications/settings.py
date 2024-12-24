@@ -16,7 +16,7 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_COOKIES_PATH = os.path.join(BASE_DIR, 'web_cookies')
-OP_CONNECT_URL = os.getenv('OP_CONNECT_URL')
+OP_CONNECT_HOST = os.getenv('OP_CONNECT_HOST')
 OP_API_KEY = os.getenv('OP_API_KEY')
 OP_SERVICE_ACCOUNT_TOKEN = os.getenv('OP_SERVICE_ACCOUNT_TOKEN')
 
@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'credential.apps.CredentialConfig',
     'automate_login.apps.AutomateLoginConfig',
     'cookie_sessions.apps.CookieSessionsConfig',
+    'one_password.apps.OnePasswordConfig'
 ]
 
 MIDDLEWARE = [
