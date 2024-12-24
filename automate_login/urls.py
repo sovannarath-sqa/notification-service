@@ -23,17 +23,16 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from automate_login.controllers.auto_login_ctrl import AutomateLoginViewSet
 
-# Initialize the router
 router = DefaultRouter()
 
-# Register the AutomateLoginViewSet with the router
+# Register the viewset, no need for action mapping here since it's done in the viewset itself
 router.register(r"automate-login", AutomateLoginViewSet, basename="automate-login")
 
 urlpatterns = [
     path("", include(router.urls)),
     path(
         "automate-login/<str:platform>/",
-        AutomateLoginViewSet.as_view(),
+        AutomateLoginViewSet.as_view({"post": "create"}),
         name="automate-login-platform",
     ),
 ]
