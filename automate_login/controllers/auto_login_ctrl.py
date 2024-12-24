@@ -102,15 +102,16 @@
 
 from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework import viewsets
 from rest_framework.response import Response
 from credential.dto.credential_dto import CredentialDTO
 from automate_login.services.auto_login_service import AutoLoginService
 import json
 
 
-class AutomateLoginViewSet(APIView):
+class AutomateLoginViewSet(viewsets.ViewSet):
 
-    def post(self, request, platform):
+    def create(self, request, platform=None):
         # Extracting data from the request body
         data = json.loads(request.body)
         username = data.get("username")
