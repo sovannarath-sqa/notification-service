@@ -1,0 +1,4 @@
+Rakuten Cookie:  {'domain': 'manage.travel.rakuten.co.jp', 'httpOnly': False, 'name': 'SVRID_HA_HMS', 'path': '/', 'sameSite': 'Lax', 'secure': False, 'value': 'hmshms205|Z2JBh|Z2JBh'}
+Rakuten Cookie:  {'domain': 'manage.travel.rakuten.co.jp', 'expiry': 1734578945, 'httpOnly': False, 'name': 'RT_KANRI_LOGIN', 'path': '/', 'sameSite': 'Lax', 'secure': True, 'value': '297f101f98c524457604770ca3ee239ff2f1ab983bf427d55c4b6fd309ed4968'}
+Rakuten Cookie:  {'domain': 'manage.travel.rakuten.co.jp', 'expiry': 1766060945, 'httpOnly': False, 'name': 'WMONID', 'path': '/', 'sameSite': 'Lax', 'secure': False, 'value': '5N-8Xnv7Du7'}
+Rakuten Cookie:  {'domain': '.travel.rakuten.co.jp', 'expiry': 1737084541, 'httpOnly': False, 'name': 'RTTRACK', 'path': '/', 'sameSite': 'Lax', 'secure': False, 'value': '4b285b4d.6298303d162ab'}
