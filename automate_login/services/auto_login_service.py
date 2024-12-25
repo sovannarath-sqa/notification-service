@@ -59,6 +59,7 @@ class AutoLoginService :
             url = 'https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_t_flg=heya&f_flg=RTN'
 
         driver_object = WebDriverInitiator(browser, url, headless=True)
+
         driver = driver_object.get_driver_instand()
         return driver
         
@@ -91,15 +92,17 @@ class AutoLoginService :
         return os.path.join(settings.WEB_COOKIES_PATH, f'{channel}_{credential_name}_cookies.pkl')
 
     def agoda_login (browser, credential, reservations) :
-        driver = AutoLoginService.Open_brower(browser=browser, channel=credential.channel)
+        print("Credential: ", credential)
+        print("Reservation: ", reservations)
+        print("Browser", browser)
+        driver = AutoLoginService.Open_brower(browser=browser, channel=credential.channel_name)
         wait = WebDriverWait(driver, 10)
 
-        
-
-        if AutoLoginService.load_session(driver=driver, channel=credential.channel, credential_name=credential.username) == False :
+        print("Agoda")
+        if AutoLoginService.load_session(driver=driver, channel=credential.channel_name, credential_name=credential.username) == False :
             time.sleep(3)
 
-            print(f"{credential.channel} {credential.username} login in progress ...")
+            print(f"{credential.channel_name} {credential.username} login in progress ...")
             iframe = driver.find_element(By.CSS_SELECTOR, "iframe[data-cy='ul-app-frame']")
             driver.switch_to.frame(iframe)
             email_input = driver.find_element(By.ID, "email")
@@ -112,11 +115,11 @@ class AutoLoginService :
             time.sleep(2)
             print(f"Agoda {credential.username} login successfunlly ...")
             
-            driver = AutoLoginService.save_session(driver=driver, channel=credential.channel, credential_name=credential.username)
+            driver = AutoLoginService.save_session(driver=driver, channel=credential.channel_name, credential_name=credential.username)
 
         # Sending batch message
         for data in reservations : 
-            driver.get(f"https://ycs.agoda.com/mldc/en-us/app/hermes/inbox/ycs/{credential.channel}?bid={data.reservation_id}")
+            driver.get(f"https://ycs.agoda.com/mldc/en-us/app/hermes/inbox/ycs/{credential.channel_id}?bid={data.reservation_id}")
 
             time.sleep(2)
 
@@ -140,7 +143,7 @@ class AutoLoginService :
         driver = AutoLoginService.Open_brower(browser=browser, channel=credential.channel)
         wait = WebDriverWait(driver, 10)
 
-        if AutoLoginService.load_session(driver=driver, channel=credential.channel, credential_name=credential.username) == False :
+        if AutoLoginService.load_session(driver=driver, channel=credential.channel_name, credential_name=credential.username) == False :
             print(f"Airbnb {credential.username} login in progress ...")
             time.sleep(3)
 
@@ -161,7 +164,7 @@ class AutoLoginService :
             print(f"Airbnb {credential.username} login successfunlly ...")
             time.sleep(3)
 
-            driver = AutoLoginService.save_session(driver=driver, channel=credential.channel, credential_name=credential.username)
+            driver = AutoLoginService.save_session(driver=driver, channel=credential.channel_name, credential_name=credential.username)
 
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[href='/hosting']")))
 
@@ -184,10 +187,10 @@ class AutoLoginService :
         driver.quit() 
     
     def rakuten_login (browser, credential, reservations) :
-        driver = AutoLoginService.Open_brower(browser=browser, channel=credential.channel)
+        driver = AutoLoginService.Open_brower(browser=browser, channel=credential.channel_name)
         wait = WebDriverWait(driver, 10)
 
-        if AutoLoginService.load_session(driver=driver, channel=credential.channel, credential_name=credential.username) == False :
+        if AutoLoginService.load_session(driver=driver, channel=credential.channel_name, credential_name=credential.username) == False :
             print(f"Rakuten {credential.username} login in progress ...")
             time.sleep(3)
 
@@ -201,7 +204,7 @@ class AutoLoginService :
             time.sleep(1)
             print(f"Rakuten {credential.username} login successfunlly ...")
 
-            driver = AutoLoginService.save_session(driver=driver, channel=credential.channel, credential_name=credential.username)
+            driver = AutoLoginService.save_session(driver=driver, channel=credential.channel_name, credential_name=credential.username)
 
         login_btn = driver.find_element(By.CSS_SELECTOR, "[value='【新】予約者の確認・キャンセル・変更処理']")
         login_btn.click()

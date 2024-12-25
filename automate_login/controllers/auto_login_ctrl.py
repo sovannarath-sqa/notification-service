@@ -122,11 +122,11 @@ class AutomateLoginViewSet(viewsets.ViewSet):
         browser = data.get("browser")
 
         # Validate required parameters
-        if not all([username, password, channel_name, channel_id, reservations]):
-            return Response(
-                {"error": "Missing required parameters"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # if not all([username, password, channel_name, channel_id, reservations]):
+        #     return Response(
+        #         {"error": "Missing required parameters"},
+        #         status=status.HTTP_400_BAD_REQUEST,
+        #     )
 
         # Prepare the CredentialDTO object
         credential = CredentialDTO(
