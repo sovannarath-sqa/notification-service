@@ -64,14 +64,14 @@ class PropertyProfileView(View):
                         "aos_organization_name": property_profile.aos_organization_name,
                         "aos_organization_slug": property_profile.aos_organization_slug,
                         "description": property_profile.description,
-                        "permissions": [],  # Assuming this could be populated from related data
-                        "status": "active",  # Default value or determined dynamically
-                        "created_at": property_profile.created_at.isoformat(),  # Format date for JSON
-                        "created_by": "system",  # Example, could be dynamic if you have user info
-                        "updated_at": property_profile.updated_at.isoformat(),  # Format date for JSON
-                        "updated_by": "system",  # Example, could be dynamic if you have user info
-                        "deleted_at": None,  # Could be dynamically populated if applicable
-                        "deleted_by": None,  # Could be dynamically populated if applicable
+                        "permissions": [],
+                        "status": "active",
+                        "created_at": property_profile.created_at.isoformat(),
+                        "created_by": "system",
+                        "updated_at": property_profile.updated_at.isoformat(),
+                        "updated_by": "system",
+                        "deleted_at": None,
+                        "deleted_by": None,
                     },
                 },
                 status=201,
@@ -182,7 +182,39 @@ class PropertyProfileView(View):
                 for profile in property_profiles
             ]
 
-            return JsonResponse(property_profile_data, safe=False)
+            return JsonResponse(
+                {
+                    "code": 200,
+                    "status": "success",
+                    "message": "Property profiles retrieved successfully",
+                    "data": property_profile_data,
+                }
+            )
+        except PropertyProfileService.DoesNotExist:
+            return JsonResponse(
+                {
+                    "code": 404,
+                    "status": "error",
+                    "message": "No property profiles found",
+                    "errors": [
+                        {
+                            "field": "unknown",
+                            "message": "No property profiles available",
+                        }
+                    ],
+                    "data": [],
+                },
+                status=404,
+            )
 
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse(
+                {
+                    "code": 500,
+                    "status": "error",
+                    "message": str(e),
+                    "errors": [{"field": "unknown", "message": str(e)}],
+                    "data": [],
+                },
+                status=500,
+            )
