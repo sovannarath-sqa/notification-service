@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 from credential.services.property_profile_service import PropertyProfileService
 import json
+from django.utils import timezone
 
 
 class PropertyProfileView(View):
@@ -178,22 +179,77 @@ class PropertyProfileView(View):
                 status=500,
             )
 
+    @csrf_exempt
     def delete_property(request, property_profile_id):
         """
-        Soft delete a property profile.
+        Soft delete a property profile by marking it as deleted.
         """
         try:
+            # Retrieve the property profile
             property_profile = PropertyProfileService.delete_property_profile(
                 property_profile_id
             )
 
+            # Check for errors
             if isinstance(property_profile, dict) and property_profile.get("error"):
-                return JsonResponse(property_profile, status=404)
+                return JsonResponse(
+                    {
+                        "code": 404,
+                        "status": "error",
+                        "message": property_profile.get("error"),
+                        "errors": [
+                            {
+                                "field": "unknown",
+                                "message": property_profile.get("error"),
+                            }
+                        ],
+                        "data": [],
+                    },
+                    status=404,
+                )
 
-            return JsonResponse({"message": "Property profile deleted"}, status=200)
+            property_profile.deleted_at = timezone.now()
+            property_profile.deleted_by = "system"
+            property_profile.save()
+
+            return JsonResponse(
+                {
+                    "code": 200,
+                    "status": "success",
+                    "message": "Property profile soft deleted successfully",
+                    "data": {
+                        "id": property_profile.id,
+                        "name": property_profile.name,
+                        "logo": property_profile.logo,
+                        "suitebook_id": property_profile.suitebook_id,
+                        "aos_slug": property_profile.aos_slug,
+                        "aos_organization_name": property_profile.aos_organization_name,
+                        "aos_organization_slug": property_profile.aos_organization_slug,
+                        "description": property_profile.description,
+                        "permissions": [],
+                        "status": "deleted",
+                        "created_at": property_profile.created_at.isoformat(),
+                        "created_by": "system",
+                        "updated_at": property_profile.updated_at.isoformat(),
+                        "updated_by": "system",
+                        "deleted_at": property_profile.deleted_at.isoformat(),
+                        "deleted_by": property_profile.deleted_by,
+                    },
+                },
+                status=200,
+            )
 
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse(
+                {
+                    "code": 500,
+                    "status": "error",
+                    "message": str(e),
+                    "errors": [{"field": "unknown", "message": str(e)}],
+                    "data": [],
+                },
+                status=500,
+            )
 
     def get_property_detail(request, property_profile_id):
         """

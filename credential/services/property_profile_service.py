@@ -30,7 +30,6 @@ class PropertyProfileService:
             )
             return property_profile
         except IntegrityError as e:
-            # Handle any database-related errors
             return {"error": str(e)}
 
     @staticmethod
@@ -46,7 +45,6 @@ class PropertyProfileService:
     ):
 
         if aos_slug:
-            # Check if there's already a property profile with the same aos_slug, excluding the current one
             existing_profile = (
                 PropertyProfile.objects.exclude(id=property_profile_id)
                 .filter(aos_slug=aos_slug)
@@ -86,20 +84,16 @@ class PropertyProfileService:
 
                 property_profile.name = name
             if logo is not None:
-                print(f"Updating logo to: {logo}")  # Debugging logo change
+                print(f"Updating logo to: {logo}")
                 property_profile.logo = logo
             if suitebook_id is not None:
-                print(
-                    f"Updating suitebook_id to: {suitebook_id}"
-                )  # Debugging suitebook_id change
+                print(f"Updating suitebook_id to: {suitebook_id}")
                 property_profile.suitebook_id = suitebook_id
             if aos_slug is not None:
-                print(f"Updating aos_slug to: {aos_slug}")  # Debugging aos_slug change
+                print(f"Updating aos_slug to: {aos_slug}")
                 property_profile.aos_slug = aos_slug
             if aos_organization_name is not None:
-                print(
-                    f"Updating aos_organization_name to: {aos_organization_name}"
-                )  # Debugging aos_organization_name change
+                print(f"Updating aos_organization_name to: {aos_organization_name}")
                 property_profile.aos_organization_name = aos_organization_name
             if aos_organization_slug is not None:
                 print(
@@ -107,9 +101,7 @@ class PropertyProfileService:
                 )  # Debugging aos_organization_slug change
                 property_profile.aos_organization_slug = aos_organization_slug
             if description is not None:
-                print(
-                    f"Updating description to: {description}"
-                )  # Debugging description change
+                print(f"Updating description to: {description}")
                 property_profile.description = description
 
                 print(f"PropertyProfile before saving: {property_profile}")
@@ -118,19 +110,13 @@ class PropertyProfileService:
 
             return property_profile
         except PropertyProfile.DoesNotExist:
-            print(
-                f"PropertyProfile with ID {property_profile_id} not found."
-            )  # Debugging not found error
+            print(f"PropertyProfile with ID {property_profile_id} not found.")
             return {"error": "PropertyProfile not found"}, 404
         except IntegrityError as e:
-            print(
-                f"IntegrityError in update_property_profile: {str(e)}"
-            )  # Debugging error
+            print(f"IntegrityError in update_property_profile: {str(e)}")
             return {"error": f"IntegrityError: {str(e)}"}, 400
         except Exception as e:
-            print(
-                f"Unexpected error in update_property_profile: {str(e)}"
-            )  # Debugging general error
+            print(f"Unexpected error in update_property_profile: {str(e)}")
             return {"error": f"Unexpected error: {str(e)}"}, 500
 
     @staticmethod
