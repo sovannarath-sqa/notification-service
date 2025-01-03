@@ -2,10 +2,19 @@ from django.db import IntegrityError
 from credential.models.propertyprofile import PropertyProfile
 from django.utils.timezone import now
 
+
 class PropertyProfileService:
-    
+
     @staticmethod
-    def create_property_profile(name, logo=None, description=None):
+    def create_property_profile(
+        name,
+        logo,
+        suitebook_id,
+        aos_slug,
+        aos_organization_name,
+        aos_organization_slug,
+        description,
+    ):
         """
         Create a new PropertyProfile instance.
         """
@@ -13,7 +22,11 @@ class PropertyProfileService:
             property_profile = PropertyProfile.objects.create(
                 name=name,
                 logo=logo,
-                description=description
+                suitebook_id=suitebook_id,
+                aos_slug=aos_slug,
+                aos_organization_name=aos_organization_name,
+                aos_organization_slug=aos_organization_slug,
+                description=description,
             )
             return property_profile
         except IntegrityError as e:
@@ -21,7 +34,9 @@ class PropertyProfileService:
             return {"error": str(e)}
 
     @staticmethod
-    def update_property_profile(property_profile_id, name=None, logo=None, description=None):
+    def update_property_profile(
+        property_profile_id, name=None, logo=None, description=None
+    ):
         """
         Update an existing PropertyProfile instance by ID.
         """
@@ -47,7 +62,9 @@ class PropertyProfileService:
         """
         try:
             property_profile = PropertyProfile.objects.get(id=property_profile_id)
-            property_profile.deleted_at = now()  # Soft delete the object by setting the deleted_at field
+            property_profile.deleted_at = (
+                now()
+            )  # Soft delete the object by setting the deleted_at field
             property_profile.save()
             return property_profile
         except PropertyProfile.DoesNotExist:
@@ -69,4 +86,6 @@ class PropertyProfileService:
         """
         Get all property profiles, excluding those that have been soft deleted.
         """
-        return PropertyProfile.objects.filter(deleted_at__isnull=True).order_by('-created_at')
+        return PropertyProfile.objects.filter(deleted_at__isnull=True).order_by(
+            "-created_at"
+        )
