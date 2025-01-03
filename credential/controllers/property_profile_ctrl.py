@@ -10,9 +10,6 @@ class PropertyProfileView(View):
 
     @csrf_exempt
     def create_property(request):
-        """
-        Create a new property profile.
-        """
         try:
             name = request.POST.get("name")
             logo = request.FILES.get("logo")
@@ -181,9 +178,6 @@ class PropertyProfileView(View):
 
     @csrf_exempt
     def delete_property(request, property_profile_id):
-        """
-        Soft delete a property profile by marking it as deleted.
-        """
         try:
             # Retrieve the property profile
             property_profile = PropertyProfileService.delete_property_profile(
@@ -216,7 +210,7 @@ class PropertyProfileView(View):
                 {
                     "code": 200,
                     "status": "success",
-                    "message": "Property profile soft deleted successfully",
+                    "message": "Property profile deleted successfully",
                     "data": {
                         "id": property_profile.id,
                         "name": property_profile.name,
@@ -252,9 +246,6 @@ class PropertyProfileView(View):
             )
 
     def get_property_detail(request, property_profile_id):
-        """
-        Retrieve a property profile by its ID.
-        """
         try:
             property_profile = PropertyProfileService.get_property_profile(
                 property_profile_id
@@ -280,9 +271,6 @@ class PropertyProfileView(View):
             return JsonResponse({"error": str(e)}, status=500)
 
     def get_all_properties(request):
-        """
-        Get all property profiles.
-        """
         try:
             property_profiles = PropertyProfileService.get_all_property_profiles()
 
