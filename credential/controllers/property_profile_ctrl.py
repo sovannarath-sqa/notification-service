@@ -369,3 +369,68 @@ class PropertyProfileView(View):
                 },
                 status=500,
             )
+
+    @csrf_exempt
+    def search_properties(request):
+        try:
+            # Parse query parameters from the request
+            query_params = request.GET.dict()
+            print("Received search query params:", query_params)
+
+            # Call the service to perform the search
+            property_profiles = PropertyProfileService.search_property_profiles(
+                query_params
+            )
+
+            if not property_profiles:
+                return JsonResponse(
+                    {
+                        "code": 404,
+                        "status": "error",
+                        "message": "No results found for the given search parameters.",
+                        "data": [],
+                    },
+                    status=404,
+                )
+
+            # Serialize the results
+            property_profile_data = [
+                {
+                    "id": profile.id,
+                    "name": profile.name,
+                    "logo": profile.logo.url if profile.logo else None,
+                    "suitebook_id": profile.suitebook_id,
+                    "aos_slug": profile.aos_slug,
+                    "aos_organization_name": profile.aos_organization_name,
+                    "aos_organization_slug": profile.aos_organization_slug,
+                    "description": profile.description,
+                    "created_at": profile.created_at.isoformat(),
+                    "updated_at": profile.updated_at.isoformat(),
+                    "deleted_at": (
+                        profile.deleted_at.isoformat() if profile.deleted_at else None
+                    ),
+                }
+                for profile in property_profiles
+            ]
+            print("Search results found:", property_profile_data)
+
+            # Return the serialized data
+            return JsonResponse(
+                {
+                    "code": 200,
+                    "status": "success",
+                    "message": "Search results retrieved successfully",
+                    "data": property_profile_data,
+                }
+            )
+        except Exception as e:
+            return JsonResponse(
+                {
+                    "code": 500,
+                    "status": "error",
+                    "message": str(e),
+                    "errors": [{"field": "unknown", "message": str(e)}],
+                    "data": [],
+                },
+                status=500,
+            )

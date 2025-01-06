@@ -103,3 +103,20 @@ class PropertyProfileService:
         return PropertyProfile.objects.filter(deleted_at__isnull=True).order_by(
             "-created_at"
         )
+
+    @staticmethod
+    def search_property_profiles(query_params):
+        queryset = PropertyProfile.objects.filter(deleted_at__isnull=True)
+
+        if "name" in query_params:
+            queryset = queryset.filter(name__icontains=query_params["name"])
+
+        if "suitebook_id" in query_params:
+            queryset = queryset.filter(suitebook_id=query_params["suitebook_id"])
+
+        if "aos_slug" in query_params:
+            queryset = queryset.filter(aos_slug__icontains=query_params["aos_slug"])
+
+        print("Final SQL Query:", queryset.query)
+
+        return queryset.order_by("-created_at")
