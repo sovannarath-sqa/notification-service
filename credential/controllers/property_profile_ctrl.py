@@ -245,30 +245,72 @@ class PropertyProfileView(View):
                 status=500,
             )
 
+    @csrf_exempt
     def get_property_detail(request, property_profile_id):
         try:
             property_profile = PropertyProfileService.get_property_profile(
                 property_profile_id
             )
 
+            # Check if the service returned an error
+            if isinstance(property_profile, dict) and property_profile.get("error"):
+                return JsonResponse(
+                    {
+                        "code": 404,
+                        "status": "error",
+                        "message": "Property profile not found",
+                        "errors": [
+                            {
+                                "field": "property_profile_id",
+                                "message": "No property profile exists with the given ID.",
+                            }
+                        ],
+                        "data": [],
+                    },
+                    status=404,
+                )
+
             if isinstance(property_profile, dict) and property_profile.get("error"):
                 return JsonResponse(property_profile, status=404)
 
             return JsonResponse(
                 {
-                    "id": property_profile.id,
-                    "name": property_profile.name,
-                    "logo": (
-                        property_profile.logo.url if property_profile.logo else None
-                    ),
-                    "description": property_profile.description,
-                    "created_at": property_profile.created_at,
-                    "deleted_at": property_profile.deleted_at,
-                }
+                    "code": 200,
+                    "status": "success",
+                    "message": "Property Profile retrieved successfully",
+                    "data": {
+                        "id": property_profile.id,
+                        "name": property_profile.name,
+                        "logo": (
+                            property_profile.logo.url if property_profile.logo else None
+                        ),
+                        "suitebook_id": property_profile.suitebook_id,
+                        "aos_slug": property_profile.aos_slug,
+                        "aos_organization_name": property_profile.aos_organization_name,
+                        "aos_organization_slug": property_profile.aos_organization_slug,
+                        "created_at": property_profile.created_at.isoformat(),
+                        "updated_at": property_profile.updated_at.isoformat(),
+                        "deleted_at": (
+                            property_profile.deleted_at.isoformat()
+                            if property_profile.deleted_at
+                            else None
+                        ),
+                    },
+                },
+                status=200,
             )
 
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse(
+                {
+                    "code": 500,
+                    "status": "error",
+                    "message": str(e),
+                    "errors": [{"field": "unknown", "message": str(e)}],
+                    "data": [],
+                },
+                status=500,
+            )
 
     def get_all_properties(request):
         try:
@@ -316,6 +358,69 @@ class PropertyProfileView(View):
                 status=404,
             )
 
+        except Exception as e:
+            return JsonResponse(
+                {
+                    "code": 500,
+                    "status": "error",
+                    "message": str(e),
+                    "errors": [{"field": "unknown", "message": str(e)}],
+                    "data": [],
+                },
+                status=500,
+            )
+
+    @csrf_exempt
+    def search_properties(request):
+        try:
+            # Parse query parameters from the request
+            query_params = request.GET.dict()
+
+            # Call the service to perform the search
+            property_profiles = PropertyProfileService.search_property_profiles(
+                query_params
+            )
+
+            if not property_profiles:
+                return JsonResponse(
+                    {
+                        "code": 404,
+                        "status": "error",
+                        "message": "No results found for the given search parameters.",
+                        "data": [],
+                    },
+                    status=404,
+                )
+
+            # Serialize the results
+            property_profile_data = [
+                {
+                    "id": profile.id,
+                    "name": profile.name,
+                    "logo": profile.logo.url if profile.logo else None,
+                    "suitebook_id": profile.suitebook_id,
+                    "aos_slug": profile.aos_slug,
+                    "aos_organization_name": profile.aos_organization_name,
+                    "aos_organization_slug": profile.aos_organization_slug,
+                    "description": profile.description,
+                    "created_at": profile.created_at.isoformat(),
+                    "updated_at": profile.updated_at.isoformat(),
+                    "deleted_at": (
+                        profile.deleted_at.isoformat() if profile.deleted_at else None
+                    ),
+                }
+                for profile in property_profiles
+            ]
+
+            # Return the serialized data
+            return JsonResponse(
+                {
+                    "code": 200,
+                    "status": "success",
+                    "message": "Search results retrieved successfully",
+                    "data": property_profile_data,
+                }
+            )
         except Exception as e:
             return JsonResponse(
                 {
