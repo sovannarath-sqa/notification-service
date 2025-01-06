@@ -375,7 +375,6 @@ class PropertyProfileView(View):
         try:
             # Parse query parameters from the request
             query_params = request.GET.dict()
-            print("Received search query params:", query_params)
 
             # Call the service to perform the search
             property_profiles = PropertyProfileService.search_property_profiles(
@@ -412,7 +411,6 @@ class PropertyProfileView(View):
                 }
                 for profile in property_profiles
             ]
-            print("Search results found:", property_profile_data)
 
             # Return the serialized data
             return JsonResponse(

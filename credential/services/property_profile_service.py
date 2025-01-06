@@ -117,6 +117,4 @@ class PropertyProfileService:
         if "aos_slug" in query_params:
             queryset = queryset.filter(aos_slug__icontains=query_params["aos_slug"])
 
-        print("Final SQL Query:", queryset.query)
-
         return queryset.order_by("-created_at")
