@@ -12,64 +12,93 @@ from django.conf import settings
 import time
 import pickle
 import os
+import requests
+from selenium.common.exceptions import TimeoutException
 
-class WebDriverInitiator :
+
+class WebDriverInitiator:
 
     HEADERS = [
-        '--disable-gpu', 
-        '--no-sandbox', 
-        '--disable-dev-shm-usage',
-        '--disable-extensions', 
-        '--enable-cookies', 
-        '--enable-features=SameSiteByDefaultCookies', 
-        '--disable-blink-features=AutomationControlled'
+        "--disable-gpu",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-extensions",
+        "--enable-cookies",
+        "--enable-features=SameSiteByDefaultCookies",
+        "--disable-blink-features=AutomationControlled",
     ]
 
-    def __init__(self, browser, url, headless) :
-        if (browser == 'Chrome') :
+    def __init__(self, browser, url, headless):
+        if browser == "Chrome":
             self.options = ChromeOptions()
-            if headless == True :
-                for header in WebDriverInitiator.HEADERS :
+            if headless == True:
+                for header in WebDriverInitiator.HEADERS:
                     self.options.add_argument(header)
-            self.driver = webdriver.Chrome(options= self.options, service=ChromeService(ChromeDriverManager().install()))
-        elif (browser == 'Firefox') :
+            self.driver = webdriver.Chrome(
+                options=self.options,
+                service=ChromeService(ChromeDriverManager().install()),
+            )
+        elif browser == "Firefox":
             self.options = FirefoxOptions()
-            if headless == False :
-                for header in WebDriverInitiator.HEADERS :
+            if headless == False:
+                for header in WebDriverInitiator.HEADERS:
                     self.options.add_argument(header)
-            self.driver = webdriver.Firefox(options=self.options, service=FireFoxService(GeckoDriverManager().install()))
+            self.driver = webdriver.Firefox(
+                options=self.options,
+                service=FireFoxService(GeckoDriverManager().install()),
+            )
 
         self.driver.get(url)
 
-    def get_driver_instand (self) :
+    def get_driver_instand(self):
         return self.driver
 
 
-class AutoLoginService :
+def get_page_with_captcha_handling(driver, url):
+    apikey = "a513b09ae99961bdc59498fb09df395d9113b68e"
+    if not apikey:
+        raise EnvironmentError("API key not found in environment variables.")
 
-    def Open_brower (browser, channel):
+    params = {"url": url, "apikey": apikey}
+    response = requests.get("https://api.zenrows.com/v1/", params=params)
+
+    if response.status_code == 200:
+        print("ZenRows bypass successful. Loading page...")
+        driver.get(response.url)  # Load the processed page
+    else:
+        print(
+            "ZenRows failed to bypass CAPTCHA. Trying manual handling or other fallback..."
+        )
+        raise Exception("Failed to retrieve page through ZenRows")
+
+
+class AutoLoginService:
+
+    def Open_brower(browser, channel):
         print(f"Opening {browser} browser ...")
-        
-        url = ''
-        if channel == 'agoda' :
-            url = 'https://ycs.agoda.com/mldc/en-us/public/login'
-        elif channel == 'airbnb' :
-            url = 'https://www.airbnb.com/login'
-        elif channel == 'rakuten' :
-            url = 'https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_t_flg=heya&f_flg=RTN'
+
+        url = ""
+        if channel == "agoda":
+            url = "https://ycs.agoda.com/mldc/en-us/public/login"
+        elif channel == "airbnb":
+            url = "https://www.airbnb.com/login"
+        elif channel == "rakuten":
+            url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_t_flg=heya&f_flg=RTN"
 
         driver_object = WebDriverInitiator(browser, url, headless=True)
         driver = driver_object.get_driver_instand()
         return driver
-        
-    def load_session (driver, channel, credential_name):
+
+    def load_session(driver, channel, credential_name):
         session_existed = False
-        file_path = AutoLoginService.get_session_file(channel=channel, credential_name=credential_name)
+        file_path = AutoLoginService.get_session_file(
+            channel=channel, credential_name=credential_name
+        )
         print("Cookies: ", file_path)
 
-        if os.path.exists(file_path) :
+        if os.path.exists(file_path):
             existed = True
-            with open(file_path, 'rb') as file:
+            with open(file_path, "rb") as file:
                 load_cookies = pickle.load(file)
 
             for cookie in load_cookies:
@@ -78,30 +107,45 @@ class AutoLoginService :
 
         driver.refresh()
         return session_existed
-    
-    def save_session (driver, channel, credential_name) :
-        file_path = AutoLoginService.get_session_file(channel=channel, credential_name=credential_name)
+
+    def save_session(driver, channel, credential_name):
+        file_path = AutoLoginService.get_session_file(
+            channel=channel, credential_name=credential_name
+        )
         cookies = driver.get_cookies()
-        with open(file_path, 'wb') as file:
+        with open(file_path, "wb") as file:
             pickle.dump(cookies, file)
 
         return driver
-    
-    def get_session_file (channel, credential_name):
-        return os.path.join(settings.WEB_COOKIES_PATH, f'{channel}_{credential_name}_cookies.pkl')
 
-    def agoda_login (browser, credential, reservations) :
-        driver = AutoLoginService.Open_brower(browser=browser, channel=credential.channel)
+    def get_session_file(channel, credential_name):
+        return os.path.join(
+            settings.WEB_COOKIES_PATH, f"{channel}_{credential_name}_cookies.pkl"
+        )
+
+    def agoda_login(browser, credential, reservations):
+        driver = AutoLoginService.Open_brower(
+            browser=browser, channel=credential.channel
+        )
         wait = WebDriverWait(driver, 10)
 
-        
-
-        if AutoLoginService.load_session(driver=driver, channel=credential.channel, credential_name=credential.username) == False :
+        if (
+            AutoLoginService.load_session(
+                driver=driver,
+                channel=credential.channel,
+                credential_name=credential.username,
+            )
+            == False
+        ):
             time.sleep(3)
 
             print(f"{credential.channel} {credential.username} login in progress ...")
-            iframe = driver.find_element(By.CSS_SELECTOR, "iframe[data-cy='ul-app-frame']")
+            iframe = driver.find_element(
+                By.CSS_SELECTOR, "iframe[data-cy='ul-app-frame']"
+            )
             driver.switch_to.frame(iframe)
+
+        try:
             email_input = driver.find_element(By.ID, "email")
             password_input = driver.find_element(By.ID, "password")
             email_input.send_keys(credential.username)
@@ -109,65 +153,134 @@ class AutoLoginService :
             login_button = driver.find_element(By.XPATH, "//button[@type='submit']")
             login_button.click()
 
+            # Wait and check for CAPTCHA
+            time.sleep(3)
+            captcha_frame = driver.find_elements(
+                By.CSS_SELECTOR, "iframe[src*='recaptcha']"
+            )
+            if captcha_frame:
+                print("CAPTCHA detected, attempting to bypass...")
+                driver.switch_to.default_content()
+                get_page_with_captcha_handling(driver, driver.current_url)
+                print("CAPTCHA handled successfully, continuing login flow...")
+
+        except Exception as e:
+            print("Error during login:", e)
+
+        # Save session after successful login
+        driver = AutoLoginService.save_session(
+            driver=driver,
+            channel=credential.channel,
+            credential_name=credential.username,
+        )
+
+        try:
+            wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "pre"))
+            )  # Adjust the selector
+            print("Dynamic content loaded successfully!")
+        except TimeoutException:
+            print("Failed to load dynamic content after CAPTCHA bypass.")
+            print("Debugging Page Source:", driver.page_source)
+            raise Exception("Dynamic content not loaded.")
+
+        # Sending batch messages
+        for data in reservations:
+            driver.get(
+                f"https://ycs.agoda.com/mldc/en-us/app/hermes/inbox/ycs/{credential.channel}?bid={data.reservation_id}"
+            )
+
             time.sleep(2)
-            print(f"Agoda {credential.username} login successfunlly ...")
-            
-            driver = AutoLoginService.save_session(driver=driver, channel=credential.channel, credential_name=credential.username)
 
-        # Sending batch message
-        for data in reservations : 
-            driver.get(f"https://ycs.agoda.com/mldc/en-us/app/hermes/inbox/ycs/{credential.channel}?bid={data.reservation_id}")
-
-            time.sleep(2)
-
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "textarea[data-element-name='inbox-conversation-send-message-text-area']")))
-            text_area = driver.find_element(By.CSS_SELECTOR, "textarea[data-element-name='inbox-conversation-send-message-text-area']")
+            wait.until(
+                EC.presence_of_element_located(
+                    (
+                        By.CSS_SELECTOR,
+                        "textarea[data-element-name='inbox-conversation-send-message-text-area']",
+                    )
+                )
+            )
+            text_area = driver.find_element(
+                By.CSS_SELECTOR,
+                "textarea[data-element-name='inbox-conversation-send-message-text-area']",
+            )
 
             # Message content
             text_area.send_keys(data.message)
 
             print("Sending message ...")
 
-            send_message_btn = driver.find_element(By.CSS_SELECTOR, "[data-element-name='inbox-conversation-send-message-button']")
+            send_message_btn = driver.find_element(
+                By.CSS_SELECTOR,
+                "[data-element-name='inbox-conversation-send-message-button']",
+            )
             send_message_btn.click()
 
             time.sleep(2)
             print(f"Reservation {data.reservation_id} message has been sent!")
-        
+
         driver.quit()
-    
-    def airbnb_login (browser, credential, reservations) : 
-        driver = AutoLoginService.Open_brower(browser=browser, channel=credential.channel)
+
+    def airbnb_login(browser, credential, reservations):
+        driver = AutoLoginService.Open_brower(
+            browser=browser, channel=credential.channel
+        )
         wait = WebDriverWait(driver, 10)
 
-        if AutoLoginService.load_session(driver=driver, channel=credential.channel, credential_name=credential.username) == False :
+        if (
+            AutoLoginService.load_session(
+                driver=driver,
+                channel=credential.channel,
+                credential_name=credential.username,
+            )
+            == False
+        ):
             print(f"Airbnb {credential.username} login in progress ...")
             time.sleep(3)
 
-            email_btn = driver.find_element(By.CSS_SELECTOR, "[data-testid='social-auth-button-email']")
+            email_btn = driver.find_element(
+                By.CSS_SELECTOR, "[data-testid='social-auth-button-email']"
+            )
             email_btn.click()
             email_field = driver.find_element(By.ID, "email-login-email")
-            form_submit = driver.find_element(By.CSS_SELECTOR, "[data-testid='auth-form']")
+            form_submit = driver.find_element(
+                By.CSS_SELECTOR, "[data-testid='auth-form']"
+            )
             email_field.send_keys(credential.username)
             form_submit.submit()
 
             time.sleep(3)
-        
-            password_field = driver.find_element(By.CSS_SELECTOR, "[name='user[password]']")
+
+            password_field = driver.find_element(
+                By.CSS_SELECTOR, "[name='user[password]']"
+            )
             password_field.send_keys(credential.password)
-            form_submit2 = driver.find_element(By.CSS_SELECTOR, "[data-testid='auth-form']")
+            form_submit2 = driver.find_element(
+                By.CSS_SELECTOR, "[data-testid='auth-form']"
+            )
             form_submit2.submit()
 
             print(f"Airbnb {credential.username} login successfunlly ...")
             time.sleep(3)
 
-            driver = AutoLoginService.save_session(driver=driver, channel=credential.channel, credential_name=credential.username)
+            driver = AutoLoginService.save_session(
+                driver=driver,
+                channel=credential.channel,
+                credential_name=credential.username,
+            )
 
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[href='/hosting']")))
+        wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "[href='/hosting']"))
+        )
 
-        for data in reservations :
+        for data in reservations:
             time.sleep(3)
-            driver.get('https://www.airbnb.com/hosting/messages/' + credential.channel_id + '?query=' + data.reservation_id)
+            driver.get(
+                "https://www.airbnb.com/hosting/messages/"
+                + credential.channel_id
+                + "?query="
+                + data.reservation_id
+            )
             wait.until(EC.presence_of_element_located(By.ID, "message_input"))
             text_area = driver.find_element(By.ID, "message_input")
 
@@ -175,19 +288,30 @@ class AutoLoginService :
             text_area.send_keys(data.message)
 
             print("Message sending ...")
-            send_button = driver.find_element(By.CSS_SELECTOR, "[data-testid='messaging_compose_bar_send_button']")
+            send_button = driver.find_element(
+                By.CSS_SELECTOR, "[data-testid='messaging_compose_bar_send_button']"
+            )
             send_button.click()
 
             time.sleep(2)
             print(f"Reservation {data.reservation_id} message has been sent!")
 
-        driver.quit() 
-    
-    def rakuten_login (browser, credential, reservations) :
-        driver = AutoLoginService.Open_brower(browser=browser, channel=credential.channel)
+        driver.quit()
+
+    def rakuten_login(browser, credential, reservations):
+        driver = AutoLoginService.Open_brower(
+            browser=browser, channel=credential.channel
+        )
         wait = WebDriverWait(driver, 10)
 
-        if AutoLoginService.load_session(driver=driver, channel=credential.channel, credential_name=credential.username) == False :
+        if (
+            AutoLoginService.load_session(
+                driver=driver,
+                channel=credential.channel,
+                credential_name=credential.username,
+            )
+            == False
+        ):
             print(f"Rakuten {credential.username} login in progress ...")
             time.sleep(3)
 
@@ -201,55 +325,103 @@ class AutoLoginService :
             time.sleep(1)
             print(f"Rakuten {credential.username} login successfunlly ...")
 
-            driver = AutoLoginService.save_session(driver=driver, channel=credential.channel, credential_name=credential.username)
+            driver = AutoLoginService.save_session(
+                driver=driver,
+                channel=credential.channel,
+                credential_name=credential.username,
+            )
 
-        login_btn = driver.find_element(By.CSS_SELECTOR, "[value='【新】予約者の確認・キャンセル・変更処理']")
+        login_btn = driver.find_element(
+            By.CSS_SELECTOR, "[value='【新】予約者の確認・キャンセル・変更処理']"
+        )
         login_btn.click()
         time.sleep(3)
 
         # Current browser tab
         first_window_handle = driver.current_window_handle
 
-        for data in reservations :
+        for data in reservations:
 
-            input_field = driver.find_element(By.CSS_SELECTOR, "[data-testid='searchBox-search-bar']")
+            input_field = driver.find_element(
+                By.CSS_SELECTOR, "[data-testid='searchBox-search-bar']"
+            )
             input_field.click()
             time.sleep(3)
 
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[name='tags.0.searchText']")))
-            real_input = driver.find_element(By.CSS_SELECTOR, "[name='tags.0.searchText']")
+            wait.until(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "[name='tags.0.searchText']")
+                )
+            )
+            real_input = driver.find_element(
+                By.CSS_SELECTOR, "[name='tags.0.searchText']"
+            )
             real_input.send_keys(data.reservation_id)
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "ul[data-testid='search-condition-field-taglist']")))
-            elements = driver.find_elements(By.CSS_SELECTOR, "ul[data-testid='search-condition-field-taglist'] > li")
+            wait.until(
+                EC.presence_of_element_located(
+                    (
+                        By.CSS_SELECTOR,
+                        "ul[data-testid='search-condition-field-taglist']",
+                    )
+                )
+            )
+            elements = driver.find_elements(
+                By.CSS_SELECTOR, "ul[data-testid='search-condition-field-taglist'] > li"
+            )
             elements[0].click()
 
-            search_btn = driver.find_element(By.CSS_SELECTOR, "[data-testid='searchHeader-submit-button']")
+            search_btn = driver.find_element(
+                By.CSS_SELECTOR, "[data-testid='searchHeader-submit-button']"
+            )
             search_btn.click()
 
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='bookingList-reservationId']")))
-            booking_item = driver.find_element(By.CSS_SELECTOR, "[data-testid='bookingList-reservationId-v1-link']")
+            wait.until(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "[data-testid='bookingList-reservationId']")
+                )
+            )
+            booking_item = driver.find_element(
+                By.CSS_SELECTOR, "[data-testid='bookingList-reservationId-v1-link']"
+            )
             booking_item.click()
             time.sleep(3)
 
             # Swithc to secnod tab
             driver.switch_to.window((driver.window_handles)[1])
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href='javascript:onClick=document.act1.submit();']")))
-            chat_btn = driver.find_element(By.CSS_SELECTOR, "a[href='javascript:onClick=document.act1.submit();']")
+            wait.until(
+                EC.presence_of_element_located(
+                    (
+                        By.CSS_SELECTOR,
+                        "a[href='javascript:onClick=document.act1.submit();']",
+                    )
+                )
+            )
+            chat_btn = driver.find_element(
+                By.CSS_SELECTOR, "a[href='javascript:onClick=document.act1.submit();']"
+            )
             chat_btn.click()
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[name='send']")))
+            wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "[name='send']"))
+            )
             btn_send = driver.find_element(By.CSS_SELECTOR, "[name='send']")
             btn_send.click()
-            
+
             # Switch to third tab
             driver.switch_to.window(driver.window_handles[2])
 
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "textarea[name='f_msg']")))
+            wait.until(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "textarea[name='f_msg']")
+                )
+            )
             text_area = driver.find_element(By.CSS_SELECTOR, "textarea[name='f_msg']")
 
             # Message content
             text_area.send_keys(data.message)
 
-            btn_send_message = driver.find_element(By.CSS_SELECTOR, "input[name='send']")
+            btn_send_message = driver.find_element(
+                By.CSS_SELECTOR, "input[name='send']"
+            )
             btn_send_message.click()
 
             all_window_handles = driver.window_handles

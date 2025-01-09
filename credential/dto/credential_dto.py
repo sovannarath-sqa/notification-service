@@ -1,9 +1,8 @@
+class CredentialDTO:
 
-class CredentialDTO : 
-
-    def __init__(self, username, password, channel_name, channel_id, reservation_id) :
+    def __init__(self, username, password, channel, channel_id, reservations):
         self.username = username
         self.password = password
-        self.channel_name = channel_name
+        self.channel = channel
         self.channel_id = channel_id
-        self.reservation_id = reservation_id
+        self.reservations = reservations
