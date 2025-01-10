@@ -4,6 +4,7 @@ from django.conf import settings
 import os
 import pickle
 import time
+import json
 
 
 class CookieSession:
@@ -144,17 +145,23 @@ class CookieSession:
             with open(file_path, "rb") as file:
                 cookies = pickle.load(file)
 
+            favicon_url = None
+            if channel == "airbnb":
+                favicon_url = "https://a0.muscache.com/airbnb/static/logotype_favicon-21cc8e6c6a2cca43f061d2dcabdf6e58.ico"
+            elif channel in ["agoda", "rakuten"]:
+                favicon_url = (
+                    f"https://www.google.com/s2/favicons?domain={cookies[0]['domain']}"
+                    if cookies
+                    else None
+                )
+
             return {
                 "profileData": {
                     f"{credential_name} {channel}": {
                         "name": credential_name,
                         "aos_slug": channel.lower(),
                         "domain": cookies[0]["domain"] if cookies else None,
-                        "faviconUrl": (
-                            f"https://www.google.com/s2/favicons?domain={cookies[0]['domain']}"
-                            if cookies
-                            else None
-                        ),
+                        "faviconUrl": favicon_url,
                         "localStorage": None,
                         "otaPlatform": channel,
                         "profileName": f"{credential_name} {channel}",
@@ -168,3 +175,26 @@ class CookieSession:
             raise FileNotFoundError(
                 f"No cookie file found for {channel} - {credential_name}"
             )
+
+    def get_cookies_as_json_file(channel, credential_name):
+        """
+        Retrieve cookies from the .pkl file and return them as JSON content for a file.
+        """
+        try:
+            # Retrieve cookies as JSON object
+            cookie_data = CookieSession.get_cookies_as_json(
+                channel=channel, credential_name=credential_name
+            )
+            # Log the JSON object for debugging
+            print(
+                f"[DEBUG] Cookie data for {channel} - {credential_name}: {cookie_data}"
+            )
+            # Convert JSON object to a string
+            json_content = json.dumps(cookie_data, indent=4)
+            return json_content
+        except Exception as e:
+            # Log the error if any
+            print(
+                f"[ERROR] Failed to generate JSON file for {channel} - {credential_name}: {e}"
+            )
+            raise
