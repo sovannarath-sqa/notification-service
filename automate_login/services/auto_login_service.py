@@ -124,6 +124,7 @@ class AutoLoginService:
         )
 
     def agoda_login(browser, credential, reservations):
+        print("Starting the agoda login process...")
         driver = AutoLoginService.Open_brower(
             browser=browser, channel=credential.channel
         )
@@ -222,6 +223,7 @@ class AutoLoginService:
         driver.quit()
 
     def airbnb_login(browser, credential, reservations):
+        print("Starting the Airbnb login process...")
         driver = AutoLoginService.Open_brower(
             browser=browser, channel=credential.channel
         )
@@ -259,6 +261,17 @@ class AutoLoginService:
                 By.CSS_SELECTOR, "[data-testid='auth-form']"
             )
             form_submit2.submit()
+
+            # Check for CAPTCHA
+        time.sleep(3)  # Wait to see if CAPTCHA loads
+        captcha_frame = driver.find_elements(
+            By.CSS_SELECTOR, "iframe[src*='recaptcha']"
+        )
+        if captcha_frame:
+            print("CAPTCHA detected, attempting to bypass...")
+            driver.switch_to.default_content()
+            get_page_with_captcha_handling(driver, driver.current_url)
+            print("CAPTCHA handled successfully, continuing login flow...")
 
             print(f"Airbnb {credential.username} login successfunlly ...")
             time.sleep(3)

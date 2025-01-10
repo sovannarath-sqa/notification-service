@@ -10,6 +10,7 @@ class AutomateLoginView(View):
 
     @csrf_exempt
     def agoda_login_view(request):
+        print("Agoda login view called")
         if request.method == "POST":
             data = json.loads(request.body)
             print("Received data:", data)
@@ -57,14 +58,24 @@ class AutomateLoginView(View):
 
     @csrf_exempt
     def airbnb_login_view(request):
+        print("Airbnb login view called")
         if request.method == "POST":
             data = json.loads(request.body)
+            print(data)
             username = data.get("username")
             password = data.get("password")
             channel_id = data.get("channel_id")
-            reservations = data.get("reservation_id")
+            reservations = data.get("reservations")
             channel = data.get("channel")
             browser = data.get("browser")
+
+            # Print each variable to ensure correct data retrieval
+            print("Username:", username)
+            print("Password:", password)
+            print("Channel ID:", channel_id)
+            print("Reservations:", reservations)
+            print("Channel Name:", channel)
+            print("Browser:", browser)
 
             if not all([username, password, channel, channel_id, reservations]):
                 return JsonResponse(
@@ -80,7 +91,9 @@ class AutomateLoginView(View):
             )
 
             try:
-                AutoLoginService.airbnb_login(browser=browser, credential=credential)
+                AutoLoginService.airbnb_login(
+                    browser=browser, credential=credential, reservations=reservations
+                )
                 return JsonResponse({"message": "Login and message sending successful"})
 
             except Exception as e:
@@ -90,6 +103,7 @@ class AutomateLoginView(View):
 
     @csrf_exempt
     def rakuten_login_view(request):
+        print("Rakuten login view called")
         if request.method == "POST":
             data = json.loads(request.body)
             username = data.get("username")
