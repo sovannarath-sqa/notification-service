@@ -109,7 +109,7 @@ class AutomateLoginView(View):
             username = data.get("username")
             password = data.get("password")
             channel_id = data.get("channel_id")
-            reservations = data.get("reservation_id")
+            reservations = data.get("reservations")
             channel = data.get("channel")
             browser = data.get("browser")
 
@@ -127,7 +127,9 @@ class AutomateLoginView(View):
             )
 
             try:
-                AutoLoginService.rakuten_login(browser=browser, credential=credential)
+                AutoLoginService.rakuten_login(
+                    browser=browser, credential=credential, reservations=reservations
+                )
                 return JsonResponse({"message": "Login and message sending successful"})
 
             except Exception as e:
