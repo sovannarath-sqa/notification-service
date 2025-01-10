@@ -2,5 +2,6 @@ from django.urls import path
 from cookie_sessions.controllers.web_cookie_session_ctrl import CookieSessionView
 
 urlpatterns = [
-    path('start', CookieSessionView.start_session, name='start_session'),
+    path("start", CookieSessionView.start_session, name="start_session"),
+    path("get-cookies/", CookieSessionView.get_cookies, name="get_cookies"),
 ]
