@@ -151,7 +151,7 @@ class CookieSession:
                 favicon_url = "https://a0.muscache.com/airbnb/static/logotype_favicon-21cc8e6c6a2cca43f061d2dcabdf6e58.ico"
                 static_url = "https://www.airbnb.com/login"
             elif channel == "agoda":
-                favicon_url = "https://www.google.com/s2/favicons?domain=agoda.com"
+                favicon_url = "https://cdn6.agoda.net/images/ycs/favicon.ico"
                 static_url = "https://ycs.agoda.com/mldc/en-us/public/login"
             elif channel == "rakuten":
                 favicon_url = "https://www.google.com/s2/favicons?domain=rakuten.com"
