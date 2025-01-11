@@ -146,14 +146,16 @@ class CookieSession:
                 cookies = pickle.load(file)
 
             favicon_url = None
+            static_url = None
             if channel == "airbnb":
                 favicon_url = "https://a0.muscache.com/airbnb/static/logotype_favicon-21cc8e6c6a2cca43f061d2dcabdf6e58.ico"
-            elif channel in ["agoda", "rakuten"]:
-                favicon_url = (
-                    f"https://www.google.com/s2/favicons?domain={cookies[0]['domain']}"
-                    if cookies
-                    else None
-                )
+                static_url = "https://www.airbnb.com/login"
+            elif channel == "agoda":
+                favicon_url = "https://www.google.com/s2/favicons?domain=agoda.com"
+                static_url = "https://ycs.agoda.com/mldc/en-us/public/login"
+            elif channel == "rakuten":
+                favicon_url = "https://www.google.com/s2/favicons?domain=rakuten.com"
+                static_url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_t_flg=heya&f_flg=RTN"
 
             return {
                 "profileData": {
@@ -166,7 +168,7 @@ class CookieSession:
                         "otaPlatform": channel,
                         "profileName": f"{credential_name} {channel}",
                         "searchableText": f"{credential_name} {channel} {cookies[0]['domain'] if cookies else ''}",
-                        "staticUrl": f"https://www.{channel}.com/",
+                        "staticUrl": static_url,
                         "cookies": cookies,
                     }
                 }

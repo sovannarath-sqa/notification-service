@@ -9,14 +9,14 @@ urlpatterns = [
         CookieSessionView.download_cookies_as_file,
         name="download_cookies",
     ),
-    path(
-        "genearete-session/",
-        CookieSessionView.generate_session,
-        name="generate_session",
-    ),
-    path(
-        "get-session/",
-        CookieSessionView.get_profile,
-        name="get_profile",
-    ),
+    # path(
+    #     "genearete-session/",
+    #     CookieSessionView.generate_session,
+    #     name="generate_session",
+    # ),
+    # path(
+    #     "get-session/",
+    #     CookieSessionView.get_profile,
+    #     name="get_profile",
+    # ),
 ]
