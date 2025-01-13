@@ -21,17 +21,19 @@ class AutomateLoginView(View):
             # Extract parameters
             username = data.get("username")
             password = data.get("password")
-            channel_id = data.get("channel_id")
-            reservations = data.get("reservations")
+            channel_id = data.get("channel_id", None)
+            reservations = data.get("reservations", [])
             channel = data.get("channel")
             browser = data.get("browser")
 
             # Validate required parameters
-            if not all([username, password, channel, channel_id, reservations]):
+            if not all([username, password, channel, browser]):
                 return JsonResponse(
-                    {"error": "Missing required parameters"}, status=400
+                    {
+                        "error": "Missing required parameters: username, password, channel, or browser"
+                    },
+                    status=400,
                 )
-
             # Create credential object
             credential = CredentialDTO(
                 username=username,
