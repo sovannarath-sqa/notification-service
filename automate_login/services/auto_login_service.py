@@ -229,85 +229,110 @@ class AutoLoginService:
         )
         wait = WebDriverWait(driver, 10)
 
-        if (
-            AutoLoginService.load_session(
-                driver=driver,
-                channel=credential.channel,
-                credential_name=credential.username,
-            )
-            == False
+        # Check and load session if available
+        if not AutoLoginService.load_session(
+            driver=driver,
+            channel=credential.channel,
+            credential_name=credential.username,
         ):
             print(f"Airbnb {credential.username} login in progress ...")
             time.sleep(3)
 
-            email_btn = driver.find_element(
-                By.CSS_SELECTOR, "[data-testid='social-auth-button-email']"
-            )
-            email_btn.click()
-            email_field = driver.find_element(By.ID, "email-login-email")
-            form_submit = driver.find_element(
-                By.CSS_SELECTOR, "[data-testid='auth-form']"
-            )
-            email_field.send_keys(credential.username)
-            form_submit.submit()
+            try:
+                # Wait for the email input field and fill it
+                email_field = wait.until(
+                    EC.presence_of_element_located(
+                        (By.CSS_SELECTOR, "[data-testid='login-signup-email']")
+                    )
+                )
+                email_field.clear()  # Clear any pre-filled value
+                email_field.send_keys(credential.username)
 
-            time.sleep(3)
+                # Wait for the password input field and fill it
+                password_field = wait.until(
+                    EC.presence_of_element_located(
+                        (By.CSS_SELECTOR, "[data-testid='login-signup-password']")
+                    )
+                )
+                password_field.clear()  # Just in case there's any pre-filled value
+                password_field.send_keys(credential.password)
 
-            password_field = driver.find_element(
-                By.CSS_SELECTOR, "[name='user[password]']"
-            )
-            password_field.send_keys(credential.password)
-            form_submit2 = driver.find_element(
-                By.CSS_SELECTOR, "[data-testid='auth-form']"
-            )
-            form_submit2.submit()
+                # Locate the login button and click it
+                login_button = wait.until(
+                    EC.element_to_be_clickable(
+                        (By.CSS_SELECTOR, "button[type='submit']")
+                    )
+                )
+                login_button.click()
 
-            # Check for CAPTCHA
-        time.sleep(3)  # Wait to see if CAPTCHA loads
-        captcha_frame = driver.find_elements(
-            By.CSS_SELECTOR, "iframe[src*='recaptcha']"
-        )
-        if captcha_frame:
-            print("CAPTCHA detected, attempting to bypass...")
-            driver.switch_to.default_content()
-            get_page_with_captcha_handling(driver, driver.current_url)
-            print("CAPTCHA handled successfully, continuing login flow...")
+                print("Waiting for potential CAPTCHA...")
+                time.sleep(3)
 
-            print(f"Airbnb {credential.username} login successfunlly ...")
-            time.sleep(3)
+                # Check for CAPTCHA
+                captcha_frame = driver.find_elements(
+                    By.CSS_SELECTOR, "iframe[src*='recaptcha']"
+                )
+                if captcha_frame:
+                    print("CAPTCHA detected, attempting to bypass...")
+                    driver.switch_to.default_content()
+                    get_page_with_captcha_handling(driver, driver.current_url)
+                    print("CAPTCHA handled successfully, continuing login flow...")
 
+                print(f"Airbnb {credential.username} logged in successfully.")
+            except Exception as e:
+                print(f"Error during login: {e}")
+                print("Page source for debugging:", driver.page_source)
+                driver.quit()
+                return
+
+            # Save session after successful login
             driver = AutoLoginService.save_session(
                 driver=driver,
                 channel=credential.channel,
                 credential_name=credential.username,
             )
 
-        wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "[href='/hosting']"))
-        )
+        # Confirm login was successful by checking for a specific element
+        try:
+            wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "[href='/hosting']"))
+            )
+        except TimeoutException:
+            print(
+                "Failed to confirm successful login. Check your credentials or CAPTCHA bypass."
+            )
+            driver.quit()
+            return
 
+        # Process reservations
         for data in reservations:
             time.sleep(3)
             driver.get(
-                "https://www.airbnb.com/hosting/messages/"
-                + credential.channel_id
-                + "?query="
-                + data.reservation_id
+                f"https://www.airbnb.com/hosting/messages/{credential.channel_id}?query={data.reservation_id}"
             )
-            wait.until(EC.presence_of_element_located(By.ID, "message_input"))
-            text_area = driver.find_element(By.ID, "message_input")
+            try:
+                # Wait for the message input field and fill it
+                text_area = wait.until(
+                    EC.presence_of_element_located((By.ID, "message_input"))
+                )
+                text_area.send_keys(data.message)
 
-            # Message Content
-            text_area.send_keys(data.message)
+                print("Sending message...")
+                send_button = wait.until(
+                    EC.element_to_be_clickable(
+                        (
+                            By.CSS_SELECTOR,
+                            "[data-testid='messaging_compose_bar_send_button']",
+                        )
+                    )
+                )
+                send_button.click()
 
-            print("Message sending ...")
-            send_button = driver.find_element(
-                By.CSS_SELECTOR, "[data-testid='messaging_compose_bar_send_button']"
-            )
-            send_button.click()
-
-            time.sleep(2)
-            print(f"Reservation {data.reservation_id} message has been sent!")
+                print(f"Reservation {data.reservation_id} message has been sent!")
+            except Exception as e:
+                print(
+                    f"Error sending message for reservation {data.reservation_id}: {e}"
+                )
 
         driver.quit()
 
