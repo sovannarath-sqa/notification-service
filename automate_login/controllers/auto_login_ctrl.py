@@ -3,6 +3,8 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 import json
+import os
+from decouple import config
 
 from credential.dto.credential_dto import CredentialDTO
 from automate_login.services.auto_login_service import AutoLoginService
@@ -15,25 +17,42 @@ class AutomateLoginView(View):
         Handle POST requests for automated login and message sending.
         """
         try:
-            data = json.loads(request.body)
-            print("Received data:", data)
+            if (
+                not request.body.strip()
+            ):  # Check if the body is empty or whitespace-only
+                data = {}
+                print(
+                    "Empty or whitespace-only body received, defaulting to empty data."
+                )
+            else:
+                try:
+                    data = json.loads(request.body)
+                    print("Parsed JSON data:", data)
+                except json.JSONDecodeError:
+                    return JsonResponse(
+                        {"error": "Invalid JSON format or empty body."}, status=400
+                    )
 
-            # Extract parameters
-            username = data.get("username")
-            password = data.get("password")
-            channel_id = data.get("channel_id", None)
+            # Extract parameters from environment variables
+            username = config("PROPERTY_NAME", default=None)
+            password = config("PROPERTY_PASSWORD", default=None)
+            browser = config("PROPERTY_BROWSER", default="Firefox")
+            channel = config("PROPERTY_CHANNEL", default=None)
+            channel_id = config("PROPERTY_CHANNEL_ID", default=None)
             reservations = data.get("reservations", [])
-            channel = data.get("channel")
-            browser = data.get("browser")
 
-            # Validate required parameters
-            if not all([username, password, channel, browser]):
+            # Debug environment variables
+            print(f"Environment variables: Username={username}, Channel={channel}")
+
+            # Validate required environment variables
+            if not all([username, password, channel]):
                 return JsonResponse(
                     {
-                        "error": "Missing required parameters: username, password, channel, or browser"
+                        "error": "Missing required environment variables: PROPERTY_NAME, PROPERTY_PASSWORD, or PROPERTY_CHANNEL"
                     },
                     status=400,
                 )
+
             # Create credential object
             credential = CredentialDTO(
                 username=username,
@@ -43,7 +62,7 @@ class AutomateLoginView(View):
                 reservations=reservations,
             )
 
-            # Determine the appropriate login method for the channel
+            # Handle login and automation
             if channel == "agoda":
                 AutoLoginService.agoda_login(browser, credential, reservations)
             elif channel == "airbnb":
@@ -58,6 +77,7 @@ class AutomateLoginView(View):
             )
 
         except Exception as e:
+            print("Exception encountered:", str(e))
             return JsonResponse({"error": str(e)}, status=500)
 
 
