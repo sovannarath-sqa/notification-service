@@ -17,10 +17,15 @@ urlpatterns = [
     #     AutomateLoginView.rakuten_login_view,
     #     name="rakuten-automate-message",
     # ),
+    # path(
+    #     "generate-sessions",
+    #     AutomateLoginView.as_view(),
+    #     name="generate-sessions",
+    # ),
     path(
-        "generate-sessions",
+        "automatelogin",
         AutomateLoginView.as_view(),
-        name="generate-sessions",
+        name="automatelogin",
     ),
 ]
 
