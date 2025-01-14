@@ -5,7 +5,6 @@ import os
 import pickle
 import time
 import json
-import sys
 
 
 class CookieSession:
@@ -19,7 +18,7 @@ class CookieSession:
         elif channel == "rakuten":
             url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_t_flg=heya&f_flg=RTN"
 
-        CookieSession.get_session(
+        return CookieSession.get_session(
             browser=browser,
             channel=channel,
             url=url,
@@ -43,33 +42,56 @@ class CookieSession:
 
             driver.refresh()
             print(f"{channel} {credential_name} session reloaded successfully!")
-            # Return the reloaded session profile
-            return CookieSession.save_session(driver, channel, credential_name)
+            return {
+                "channel": channel,
+                "credential_name": credential_name,
+                "cookies": cookies,
+            }
         else:
-            # Perform login and return session profile
             return CookieSession.login(driver, channel, credential_name, password)
 
     def login(driver, channel, credential_name, password):
         if channel == "agoda":
             print(f"{channel} {credential_name} login in progress ...")
-            time.sleep(3)
+            try:
+                # Wait for and switch to the iframe
+                from selenium.webdriver.support.ui import WebDriverWait
+                from selenium.webdriver.support import expected_conditions as EC
 
-            iframe = driver.find_element(
-                By.CSS_SELECTOR, "iframe[data-cy='ul-app-frame']"
-            )
-            driver.switch_to.frame(iframe)
-            email_input = driver.find_element(By.ID, "email")
-            password_input = driver.find_element(By.ID, "password")
-            email_input.send_keys(password)
-            password_input.send_keys(credential_name)
+                iframe = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located(
+                        (By.CSS_SELECTOR, "iframe[data-cy='ul-app-frame']")
+                    )
+                )
+                driver.switch_to.frame(iframe)
 
-            login_button = driver.find_element(By.XPATH, "//button[@type='submit']")
-            login_button.click()
-            time.sleep(2)
-            print(f"{channel} {credential_name} login successfunlly ...")
-            return CookieSession.save_session(
-                driver, channel=channel, credential_name=credential_name
-            )
+                # Wait for email input and fill in credentials
+                email_input = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "email"))
+                )
+                password_input = driver.find_element(By.ID, "password")
+                email_input.send_keys(credential_name)
+                password_input.send_keys(password)
+
+                # Click the login button
+                login_button = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, "//button[@type='submit']"))
+                )
+                login_button.click()
+
+                # Optional: Validate login success (e.g., check for a specific element on the dashboard)
+                time.sleep(
+                    2
+                )  # Replace with WebDriverWait for specific dashboard element
+                print(f"{channel} {credential_name} login successfully ...")
+
+                return CookieSession.save_session(
+                    driver, channel=channel, credential_name=credential_name
+                )
+
+            except Exception as e:
+                print(f"[ERROR] Agoda login failed for {credential_name}: {str(e)}")
+                raise
 
         elif channel == "airbnb":
             print(f"Airbnb {credential_name} login in progress ...")
@@ -209,61 +231,77 @@ class CookieSession:
             raise
 
     def generate_sessions(output_file="all_sessions.json"):
-        """
-        Process properties from props.json, generate sessions, and save them to a file.
-        """
+
         try:
-            # Load the JSON configuration
-            with open("props.json", "r") as file:
-                config = json.load(file)
+            web_cookies_path = os.path.join(settings.BASE_DIR, "web_cookies")
+            os.makedirs(web_cookies_path, exist_ok=True)
+            output_file_path = os.path.join(web_cookies_path, output_file)
+            print(f"[DEBUG] Output file path: {output_file_path}")
+
+            # Hardcoded OTA credentials
+            ota_credentials = {
+                "airbnb": {
+                    "username": "guest-haneda-airport@minn.asia",
+                    "password": "hpy2raq4ubq6pam-MVX",
+                },
+                "rakuten": {"username": "theatelh", "password": "theatel.12"},
+                "agoda": {
+                    "username": "guest-kamata@minn.asia",
+                    "password": "Squeeze0901",
+                },
+            }
 
             all_sessions = {}
+            detailed_results = []
 
-            # Iterate through properties
-            for property_data in config["properties"]:
-                property_name = property_data["name"]
-                otas = property_data["otas"]
+            for ota, credentials in ota_credentials.items():
+                result = {
+                    "channel": ota,
+                    "credential_name": credentials["username"],
+                    "status": "failed",
+                    "message": None,
+                }
 
-                print(f"Processing property: {property_name}")
+                try:
+                    print(f"Processing OTA: {ota}")
 
-                for ota in otas:
-                    # Assign hardcoded credentials
-                    if ota == "airbnb":
-                        username = "guest-haneda-airport@minn.asia"
-                        password = "hpy2raq4ubq6pam-MVX"
-                    elif ota == "rakuten":
-                        username = "theatelh"
-                        password = "theatel.12"
-                    elif ota == "agoda":
-                        username = "guest-kamata@minn.asia"
-                        password = "Squeeze0901"
-                    else:
-                        print(f"Unsupported OTA: {ota}")
-                        continue
-
-                    # Start the session and get the profile
+                    # Generate session using CookieSession
                     profile = CookieSession.start_session(
                         browser="Firefox",
                         channel=ota,
-                        credential_name=username,
-                        password=password,
+                        credential_name=credentials["username"],
+                        password=credentials["password"],
                     )
 
                     if profile:
-                        # Add the session to the grouped dictionary
+                        print(f"[DEBUG] Profile generated for {ota}: {profile}")
+
                         if ota not in all_sessions:
                             all_sessions[ota] = []
                         all_sessions[ota].append(profile)
-                        print(
-                            f"Session generated successfully for {property_name} - {ota}"
-                        )
 
-            # Save all sessions to the output file
-            CookieSession.save_all_sessions_to_file(all_sessions, output_file)
+                        result["status"] = "success"
+                        result["message"] = f"Session generated successfully for {ota}"
+                    else:
+                        print(f"[DEBUG] No profile returned for {ota}")
+                except Exception as e:
+                    result["message"] = f"Error: {str(e)}"
+                    print(f"[ERROR] {result['message']}")
 
-            print(f"All sessions have been processed and saved to {output_file}.")
-            # Remove sys.exit to allow the program to continue
-        except FileNotFoundError:
-            print("Error: props.json file not found.")
+                detailed_results.append(result)
+
+            # Save sessions to file
+            if all_sessions:
+                CookieSession.save_all_sessions_to_file(all_sessions, output_file_path)
+                print(f"[DEBUG] All sessions saved to {output_file_path}")
+            else:
+                print("[DEBUG] No sessions to save.")
+
+            return {
+                "message": "Sessions generated successfully.",
+                "sessions": detailed_results,
+            }
+
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"[ERROR] An error occurred: {e}")
+            raise
