@@ -305,3 +305,67 @@ class CookieSession:
         except Exception as e:
             print(f"[ERROR] An error occurred: {e}")
             raise
+
+    def fetch_profile_sessions(file_path="all_sessions.json"):
+        try:
+            full_path = os.path.join(settings.BASE_DIR, "web_cookies", file_path)
+            if not os.path.exists(full_path):
+                raise FileNotFoundError(f"File not found: {full_path}")
+
+            with open(full_path, "r") as file:
+                profiles = json.load(file)
+
+            formatted_profiles = {}
+
+            # Enhance each profile with additional metadata
+            for channel, sessions in profiles.items():
+                for session in sessions:
+                    credential_name = session.get("credential_name")
+                    cookies = session.get("cookies", [])
+
+                    favicon_url = None
+                    static_url = None
+
+                    if channel == "airbnb":
+                        favicon_url = "https://a0.muscache.com/airbnb/static/logotype_favicon-21cc8e6c6a2cca43f061d2dcabdf6e58.ico"
+                        static_url = "https://www.airbnb.com/login"
+                    elif channel == "agoda":
+                        favicon_url = "https://cdn6.agoda.net/images/ycs/favicon.ico"
+                        static_url = "https://ycs.agoda.com/mldc/en-us/public/login"
+                    elif channel == "rakuten":
+                        favicon_url = (
+                            "https://www.google.com/s2/favicons?domain=rakuten.com"
+                        )
+                        static_url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_t_flg=heya&f_flg=RTN"
+
+                    profile_data = {
+                        "name": credential_name,
+                        "aos_slug": channel.lower(),
+                        "domain": cookies[0]["domain"] if cookies else None,
+                        "faviconUrl": favicon_url,
+                        "localStorage": None,
+                        "otaPlatform": channel,
+                        "profileName": f"{credential_name} {channel}",
+                        "searchableText": f"{credential_name} {channel} {cookies[0]['domain'] if cookies else ''}",
+                        "staticUrl": static_url,
+                        "cookies": cookies,
+                    }
+
+                    if channel not in formatted_profiles:
+                        formatted_profiles[channel] = []
+
+                    formatted_profiles[channel].append(profile_data)
+
+            print(
+                f"[DEBUG] Profiles fetched and formatted successfully from {full_path}"
+            )
+            return {
+                "message": "Profiles fetched successfully.",
+                "profiles": formatted_profiles,
+            }
+
+        except FileNotFoundError as fnfe:
+            print(f"[ERROR] {str(fnfe)}")
+            return {"error": str(fnfe)}
+        except Exception as e:
+            print(f"[ERROR] An error occur")

@@ -105,6 +105,24 @@ class CookieSessionView(View):
                 status=405,
             )
 
+    @csrf_exempt
+    def fetch_profiles(request):
+        """
+        Endpoint to fetch all session profiles from the JSON file.
+        """
+        if request.method == "GET":
+            try:
+                profiles = CookieSession.fetch_profile_sessions()
+                return JsonResponse(profiles, status=200)
+            except FileNotFoundError as fnfe:
+                return JsonResponse({"error": str(fnfe)}, status=404)
+            except Exception as e:
+                return JsonResponse({"error": str(e)}, status=500)
+        else:
+            return JsonResponse(
+                {"error": "Invalid request method. Only GET is allowed."}, status=405
+            )
+
     # @csrf_exempt
     # def download_cookies_as_file(request):
     #     """

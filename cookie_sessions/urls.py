@@ -9,6 +9,11 @@ urlpatterns = [
         CookieSessionView.generate_sessions,
         name="generate_sessions",
     ),
+    path(
+        "fetch-profiles-sessions/",
+        CookieSessionView.fetch_profiles,
+        name="fetch_profile",
+    ),
     # path(
     #     "get-session/",
     #     CookieSessionView.get_profile,
