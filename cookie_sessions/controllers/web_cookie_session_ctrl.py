@@ -1,166 +1,103 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views import View
 from cookie_sessions.services.web_cookie_sessions import CookieSession
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 import json
-from django.http import HttpResponse
 
 
+def parse_request_body(request):
+    try:
+        return json.loads(request.body), None
+    except json.JSONDecodeError as e:
+        return None, {"error": "Invalid JSON body.", "details": str(e)}
+
+
+@method_decorator(csrf_exempt, name="dispatch")
 class CookieSessionView(View):
 
-    @csrf_exempt
+    @require_http_methods(["POST"])
     def start_session(request):
+        data, error = parse_request_body(request)
+        if error:
+            return JsonResponse(error, status=400)
 
-        if request.method == "POST":
-            data = json.loads(request.body)
-            channel = data.get("channel")
-            credential_name = data.get("credential_name")
-            password = data.get("password")
-            browser = data.get("browser")
+        channel = data.get("channel")
+        credential_name = data.get("credential_name")
+        password = data.get("password")
+        browser = data.get("browser")
 
-            if not channel or not credential_name:
-                return JsonResponse(
-                    {
-                        "error": "Missing required parameters: channel and credential_name"
-                    },
-                    status=400,
-                )
+        if not channel or not credential_name:
+            return JsonResponse(
+                {"error": "Missing required parameters: channel and credential_name"},
+                status=400,
+            )
 
-            try:
-                CookieSession.start_session(
-                    browser=browser,
-                    channel=channel,
-                    credential_name=credential_name,
-                    password=password,
-                )
-                return JsonResponse(
-                    {
-                        "message": f"Session started successfully for {channel} - {credential_name}"
-                    },
-                    status=200,
-                )
+        try:
+            CookieSession.start_session(
+                browser=browser,
+                channel=channel,
+                credential_name=credential_name,
+                password=password,
+            )
+            return JsonResponse(
+                {
+                    "message": f"Session started successfully for {channel} - {credential_name}"
+                },
+                status=200,
+            )
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
 
-            except Exception as e:
-                return JsonResponse({"error": str(e)}, status=500)
-        else:
+    @require_http_methods(["POST"])
+    def get_cookies(request):
+        data, error = parse_request_body(request)
+        if error:
+            return JsonResponse(error, status=400)
+
+        channel = data.get("channel")
+        credential_name = data.get("credential_name")
+
+        if not channel or not credential_name:
+            return JsonResponse(
+                {"error": "Missing required parameters: channel and credential_name"},
+                status=400,
+            )
+
+        try:
+            cookies = CookieSession.get_cookies_as_json(
+                channel=channel, credential_name=credential_name
+            )
+            return JsonResponse(cookies, status=200)
+        except FileNotFoundError as e:
+            return JsonResponse({"error": str(e)}, status=404)
+        except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
     @csrf_exempt
-    def get_cookies(request):
-        """
-        Endpoint to get cookies in JSON format.
-        """
-        if request.method == "POST":
-            data = json.loads(request.body)
-            channel = data.get("channel")
-            credential_name = data.get("credential_name")
-
-            if not channel or not credential_name:
-                return JsonResponse(
-                    {
-                        "error": "Missing required parameters: channel and credential_name"
-                    },
-                    status=400,
-                )
-
-            try:
-                cookies = CookieSession.get_cookies_as_json(
-                    channel=channel, credential_name=credential_name
-                )
-                return JsonResponse(cookies, status=200)
-            except FileNotFoundError as e:
-                return JsonResponse({"error": str(e)}, status=404)
-            except Exception as e:
-                return JsonResponse({"error": str(e)}, status=500)
-        else:
-            return JsonResponse(
-                {"error": "Invalid request method. Only POST is allowed."}, status=405
-            )
-
-    @csrf_exempt
+    @require_http_methods(["POST"])
     def generate_sessions(request):
-        """
-        Endpoint to generate sessions for properties based on props.json configuration.
-        """
-        if request.method == "POST":
-            try:
-                # Call the service function to generate sessions
-                session_details = CookieSession.generate_sessions()
-
-                # Return detailed feedback
-                return JsonResponse(
-                    {
-                        "message": "Sessions generated successfully.",
-                        "details": session_details,
-                    },
-                    status=200,
-                )
-            except FileNotFoundError as fnfe:
-                return JsonResponse({"error": str(fnfe)}, status=404)
-            except Exception as e:
-                return JsonResponse({"error": str(e)}, status=500)
-        else:
+        try:
+            session_details = CookieSession.generate_sessions()
             return JsonResponse(
-                {"error": "Invalid request method. Only POST is allowed."},
-                status=405,
+                {
+                    "message": "Sessions generated successfully.",
+                    "details": session_details,
+                },
+                status=200,
             )
+        except FileNotFoundError as fnfe:
+            return JsonResponse({"error": str(fnfe)}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
 
-    @csrf_exempt
+    @require_http_methods(["GET"])
     def fetch_profiles(request):
-        """
-        Endpoint to fetch all session profiles from the JSON file.
-        """
-        if request.method == "GET":
-            try:
-                profiles = CookieSession.fetch_profile_sessions()
-                return JsonResponse(profiles, status=200)
-            except FileNotFoundError as fnfe:
-                return JsonResponse({"error": str(fnfe)}, status=404)
-            except Exception as e:
-                return JsonResponse({"error": str(e)}, status=500)
-        else:
-            return JsonResponse(
-                {"error": "Invalid request method. Only GET is allowed."}, status=405
-            )
-
-    # @csrf_exempt
-    # def download_cookies_as_file(request):
-    #     """
-    #     Endpoint to get cookies as a downloadable JSON file.
-    #     """
-    #     if request.method == "POST":
-    #         try:
-    #             # Parse the request body
-    #             data = json.loads(request.body)
-    #             channel = data.get("channel")
-    #             credential_name = data.get("credential_name")
-
-    #             if not channel or not credential_name:
-    #                 return JsonResponse(
-    #                     {
-    #                         "error": "Missing required parameters: channel and credential_name"
-    #                     },
-    #                     status=400,
-    #                 )
-
-    #             # Generate JSON content for the file
-    #             json_content = CookieSession.get_cookies_as_json_file(
-    #                 channel=channel, credential_name=credential_name
-    #             )
-
-    #             # Create response to serve JSON as a downloadable file
-    #             response = HttpResponse(json_content, content_type="application/json")
-    #             response["Content-Disposition"] = (
-    #                 f'attachment; filename="{channel}_{credential_name}_cookies.json"'
-    #             )
-
-    #             return response
-
-    #         except FileNotFoundError as e:
-    #             return JsonResponse({"error": str(e)}, status=404)
-    #         except Exception as e:
-    #             return JsonResponse({"error": str(e)}, status=500)
-    #     else:
-    #         return JsonResponse(
-    #             {"error": "Invalid request method. Only POST is allowed."}, status=405
-    #         )
+        try:
+            profiles = CookieSession.fetch_profile_sessions()
+            return JsonResponse(profiles, status=200)
+        except FileNotFoundError as fnfe:
+            return JsonResponse({"error": str(fnfe)}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)

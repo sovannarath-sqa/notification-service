@@ -145,14 +145,32 @@ class CookieSession:
             )
 
     def save_session(driver, channel, credential_name):
-        """
-        Save cookies for a specific session into a unified session data structure.
-        """
         cookies = driver.get_cookies()
+
+        formatted_cookies = []
+        for cookie in cookies:
+            formatted_cookies.append(
+                {
+                    "domain": cookie.get("domain"),
+                    "expirationDate": (
+                        cookie.get("expiry") * 1000 if "expiry" in cookie else None
+                    ),
+                    "hostOnly": cookie.get("hostOnly", False),
+                    "httpOnly": cookie.get("httpOnly", False),
+                    "name": cookie.get("name"),
+                    "path": cookie.get("path", "/"),
+                    "sameSite": cookie.get("sameSite", "unspecified"),
+                    "secure": cookie.get("secure", False),
+                    "session": cookie.get("session", False),
+                    "storeId": cookie.get("storeId", "0"),
+                    "value": cookie.get("value"),
+                }
+            )
+
         session_data = {
             "channel": channel,
             "credential_name": credential_name,
-            "cookies": cookies,
+            "cookies": formatted_cookies,
         }
         return session_data
 
@@ -168,47 +186,6 @@ class CookieSession:
         return os.path.join(
             settings.WEB_COOKIES_PATH, f"{channel}_{credential_name}_cookies.json"
         )
-
-    def get_cookies_as_json(channel, credential_name):
-        file_path = CookieSession.get_session_file(
-            channel=channel, credential_name=credential_name
-        )
-        if os.path.exists(file_path):
-            with open(file_path, "rb") as file:
-                cookies = pickle.load(file)
-
-            favicon_url = None
-            static_url = None
-            if channel == "airbnb":
-                favicon_url = "https://a0.muscache.com/airbnb/static/logotype_favicon-21cc8e6c6a2cca43f061d2dcabdf6e58.ico"
-                static_url = "https://www.airbnb.com/login"
-            elif channel == "agoda":
-                favicon_url = "https://cdn6.agoda.net/images/ycs/favicon.ico"
-                static_url = "https://ycs.agoda.com/mldc/en-us/public/login"
-            elif channel == "rakuten":
-                favicon_url = "https://www.google.com/s2/favicons?domain=rakuten.com"
-                static_url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_t_flg=heya&f_flg=RTN"
-
-            return {
-                "   ": {
-                    f"{credential_name} {channel}": {
-                        "name": credential_name,
-                        "aos_slug": channel.lower(),
-                        "domain": cookies[0]["domain"] if cookies else None,
-                        "faviconUrl": favicon_url,
-                        "localStorage": None,
-                        "otaPlatform": channel,
-                        "profileName": f"{credential_name} {channel}",
-                        "searchableText": f"{credential_name} {channel} {cookies[0]['domain'] if cookies else ''}",
-                        "staticUrl": static_url,
-                        "cookies": cookies,
-                    }
-                }
-            }
-        else:
-            raise FileNotFoundError(
-                f"No cookie file found for {channel} - {credential_name}"
-            )
 
     def get_cookies_as_json_file(channel, credential_name):
         try:
@@ -323,49 +300,64 @@ class CookieSession:
                     credential_name = session.get("credential_name")
                     cookies = session.get("cookies", [])
 
-                    favicon_url = None
-                    static_url = None
+                    # Default metadata based on the channel
+                    favicon_url, static_url = None, None
 
                     if channel == "airbnb":
                         favicon_url = "https://a0.muscache.com/airbnb/static/logotype_favicon-21cc8e6c6a2cca43f061d2dcabdf6e58.ico"
-                        static_url = "https://www.airbnb.com/login"
+                        static_url = "https://www.airbnb.com/hosting/messages"
                     elif channel == "agoda":
                         favicon_url = "https://cdn6.agoda.net/images/ycs/favicon.ico"
-                        static_url = "https://ycs.agoda.com/mldc/en-us/public/login"
+                        static_url = "https://ycs.agoda.com/mldc/en-us/app/reporting/booking/55052795"
                     elif channel == "rakuten":
                         favicon_url = (
-                            "https://www.google.com/s2/favicons?domain=rakuten.com"
+                            "https://trv.r10s.com/eve/static/images/favicon.ico"
                         )
-                        static_url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_t_flg=heya&f_flg=RTN"
+                        static_url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_no=182771&f_t_flg=heya&f_flg=RTN"
 
+                    # Construct the profile data
+                    profile_key = (
+                        f"{credential_name} {channel}" if credential_name else channel
+                    )
                     profile_data = {
                         "name": credential_name,
-                        "aos_slug": channel.lower(),
-                        "domain": cookies[0]["domain"] if cookies else None,
+                        "aos_slug": credential_name.lower(),
+                        "domain": (
+                            "https://www.airbnb.com"
+                            if channel == "airbnb"
+                            else (
+                                "https://manage.travel.rakuten.co.jp"
+                                if channel == "rakuten"
+                                else (
+                                    "https://ycs.agoda.com"
+                                    if channel == "agoda"
+                                    else cookies[0]["domain"] if cookies else None
+                                )
+                            )
+                        ),
                         "faviconUrl": favicon_url,
                         "localStorage": None,
                         "otaPlatform": channel,
-                        "profileName": f"{credential_name} {channel}",
-                        "searchableText": f"{credential_name} {channel} {cookies[0]['domain'] if cookies else ''}",
+                        "profileName": profile_key,
+                        "searchableText": f"{profile_key} {cookies[0]['domain'] if cookies else ''}",
                         "staticUrl": static_url,
                         "cookies": cookies,
                     }
 
-                    if channel not in formatted_profiles:
-                        formatted_profiles[channel] = []
-
-                    formatted_profiles[channel].append(profile_data)
+                    # Add to formatted profiles
+                    if profile_key not in formatted_profiles:
+                        formatted_profiles[profile_key] = profile_data
 
             print(
                 f"[DEBUG] Profiles fetched and formatted successfully from {full_path}"
             )
-            return {
-                "message": "Profiles fetched successfully.",
-                "profiles": formatted_profiles,
-            }
+            return {"profileData": formatted_profiles}
 
         except FileNotFoundError as fnfe:
             print(f"[ERROR] {str(fnfe)}")
             return {"error": str(fnfe)}
         except Exception as e:
-            print(f"[ERROR] An error occur")
+            print(f"[ERROR] An unexpected error occurred: {str(e)}")
+            return {
+                "error": "An unexpected error occurred. Please check the logs for more details."
+            }
