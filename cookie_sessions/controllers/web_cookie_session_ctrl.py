@@ -85,10 +85,18 @@ class CookieSessionView(View):
         if request.method == "POST":
             try:
                 # Call the service function to generate sessions
-                CookieSession.generate_sessions()
+                session_details = CookieSession.generate_sessions()
+
+                # Return detailed feedback
                 return JsonResponse(
-                    {"message": "Sessions generated successfully."}, status=200
+                    {
+                        "message": "Sessions generated successfully.",
+                        "details": session_details,
+                    },
+                    status=200,
                 )
+            except FileNotFoundError as fnfe:
+                return JsonResponse({"error": str(fnfe)}, status=404)
             except Exception as e:
                 return JsonResponse({"error": str(e)}, status=500)
         else:

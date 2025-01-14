@@ -5,6 +5,7 @@ import os
 import pickle
 import time
 import json
+import sys
 
 
 class CookieSession:
@@ -30,27 +31,29 @@ class CookieSession:
         driver_object = WebDriverInitiator(browser, url, headless=False)
         driver = driver_object.get_driver_instand()
 
-        file_path = CookieSession.get_session_file(
-            channel=channel, credential_name=credential_name
-        )
-        print("Cookies: ", file_path)
+        file_path = CookieSession.get_session_file(channel, credential_name)
+        print("Cookies file path: ", file_path)
 
         if os.path.exists(file_path):
-            with open(file_path, "rb") as file:
-                load_cookies = pickle.load(file)
+            with open(file_path, "r") as file:
+                cookies = json.load(file)
 
-            for cookie in load_cookies:
-                print("Cookie:", cookie)
+            for cookie in cookies:
                 driver.add_cookie(cookie)
 
             driver.refresh()
-            print(f"{channel} {credential_name} session reload successfuly!")
+            print(f"{channel} {credential_name} session reloaded successfully!")
+            # Return the reloaded session profile
+            return CookieSession.save_session(driver, channel, credential_name)
         else:
-            CookieSession.login(driver, channel, credential_name, password)
+            # Perform login and return session profile
+            return CookieSession.login(driver, channel, credential_name, password)
 
     def login(driver, channel, credential_name, password):
         if channel == "agoda":
             print(f"{channel} {credential_name} login in progress ...")
+            time.sleep(3)
+
             iframe = driver.find_element(
                 By.CSS_SELECTOR, "iframe[data-cy='ul-app-frame']"
             )
@@ -120,24 +123,31 @@ class CookieSession:
             )
 
     def save_session(driver, channel, credential_name):
-        file_path = CookieSession.get_session_file(
-            channel=channel, credential_name=credential_name
-        )
+        """
+        Save cookies for a specific session into a unified session data structure.
+        """
         cookies = driver.get_cookies()
-        with open(file_path, "wb") as file:
-            pickle.dump(cookies, file)
+        session_data = {
+            "channel": channel,
+            "credential_name": credential_name,
+            "cookies": cookies,
+        }
+        return session_data
 
-        return driver
+    def save_all_sessions_to_file(all_sessions, file_path):
+        """
+        Save all sessions into a single JSON file.
+        """
+        with open(file_path, "w") as file:
+            json.dump(all_sessions, file, indent=4)
+        print(f"All sessions saved successfully to {file_path}")
 
     def get_session_file(channel, credential_name):
         return os.path.join(
-            settings.WEB_COOKIES_PATH, f"{channel}_{credential_name}_cookies.pkl"
+            settings.WEB_COOKIES_PATH, f"{channel}_{credential_name}_cookies.json"
         )
 
     def get_cookies_as_json(channel, credential_name):
-        """
-        Retrieve cookies from the .pkl file and return them in JSON format.
-        """
         file_path = CookieSession.get_session_file(
             channel=channel, credential_name=credential_name
         )
@@ -179,9 +189,6 @@ class CookieSession:
             )
 
     def get_cookies_as_json_file(channel, credential_name):
-        """
-        Retrieve cookies from the .pkl file and return them as JSON content for a file.
-        """
         try:
             # Retrieve cookies as JSON object
             cookie_data = CookieSession.get_cookies_as_json(
@@ -201,14 +208,16 @@ class CookieSession:
             )
             raise
 
-    def generate_sessions():
+    def generate_sessions(output_file="all_sessions.json"):
         """
-        Loop through properties in props.json and generate sessions for each OTA.
+        Process properties from props.json, generate sessions, and save them to a file.
         """
         try:
             # Load the JSON configuration
             with open("props.json", "r") as file:
                 config = json.load(file)
+
+            all_sessions = {}
 
             # Iterate through properties
             for property_data in config["properties"]:
@@ -218,43 +227,42 @@ class CookieSession:
                 print(f"Processing property: {property_name}")
 
                 for ota in otas:
-                    # Hardcoded username
-                    username = f"{property_name}"
-
-                    # Match OTA and assign hardcoded password
+                    # Assign hardcoded credentials
                     if ota == "airbnb":
-                        username = ("guest-haneda-airport@minn.asia",)
+                        username = "guest-haneda-airport@minn.asia"
                         password = "hpy2raq4ubq6pam-MVX"
-                        profile = CookieSession.start_session(
-                            browser="Firefox",
-                            channel=ota,
-                            credential_name=username,
-                            password=password,
-                        )
                     elif ota == "rakuten":
-                        username = ("theatelh",)
+                        username = "theatelh"
                         password = "theatel.12"
-                        profile = CookieSession.start_session(
-                            browser="Firefox",
-                            channel=ota,
-                            credential_name=username,
-                            password=password,
-                        )
                     elif ota == "agoda":
-                        username = ("guest-kamata@minn.asia",)
+                        username = "guest-kamata@minn.asia"
                         password = "Squeeze0901"
-                        profile = CookieSession.start_session(
-                            browser="Firefox",
-                            channel=ota,
-                            credential_name=username,
-                            password=password,
-                        )
                     else:
                         print(f"Unsupported OTA: {ota}")
                         continue
 
-                    print(f"Session generated successfully for {property_name} - {ota}")
+                    # Start the session and get the profile
+                    profile = CookieSession.start_session(
+                        browser="Firefox",
+                        channel=ota,
+                        credential_name=username,
+                        password=password,
+                    )
 
+                    if profile:
+                        # Add the session to the grouped dictionary
+                        if ota not in all_sessions:
+                            all_sessions[ota] = []
+                        all_sessions[ota].append(profile)
+                        print(
+                            f"Session generated successfully for {property_name} - {ota}"
+                        )
+
+            # Save all sessions to the output file
+            CookieSession.save_all_sessions_to_file(all_sessions, output_file)
+
+            print(f"All sessions have been processed and saved to {output_file}.")
+            # Remove sys.exit to allow the program to continue
         except FileNotFoundError:
             print("Error: props.json file not found.")
         except Exception as e:
