@@ -200,3 +200,62 @@ class CookieSession:
                 f"[ERROR] Failed to generate JSON file for {channel} - {credential_name}: {e}"
             )
             raise
+
+    def generate_sessions():
+        """
+        Loop through properties in props.json and generate sessions for each OTA.
+        """
+        try:
+            # Load the JSON configuration
+            with open("props.json", "r") as file:
+                config = json.load(file)
+
+            # Iterate through properties
+            for property_data in config["properties"]:
+                property_name = property_data["name"]
+                otas = property_data["otas"]
+
+                print(f"Processing property: {property_name}")
+
+                for ota in otas:
+                    # Hardcoded username
+                    username = f"{property_name}"
+
+                    # Match OTA and assign hardcoded password
+                    if ota == "airbnb":
+                        username = ("guest-haneda-airport@minn.asia",)
+                        password = "hpy2raq4ubq6pam-MVX"
+                        profile = CookieSession.start_session(
+                            browser="Firefox",
+                            channel=ota,
+                            credential_name=username,
+                            password=password,
+                        )
+                    elif ota == "rakuten":
+                        username = ("theatelh",)
+                        password = "theatel.12"
+                        profile = CookieSession.start_session(
+                            browser="Firefox",
+                            channel=ota,
+                            credential_name=username,
+                            password=password,
+                        )
+                    elif ota == "agoda":
+                        username = ("guest-kamata@minn.asia",)
+                        password = "Squeeze0901"
+                        profile = CookieSession.start_session(
+                            browser="Firefox",
+                            channel=ota,
+                            credential_name=username,
+                            password=password,
+                        )
+                    else:
+                        print(f"Unsupported OTA: {ota}")
+                        continue
+
+                    print(f"Session generated successfully for {property_name} - {ota}")
+
+        except FileNotFoundError:
+            print("Error: props.json file not found.")
+        except Exception as e:
+            print(f"An error occurred: {e}")

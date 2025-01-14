@@ -77,6 +77,26 @@ class CookieSessionView(View):
                 {"error": "Invalid request method. Only POST is allowed."}, status=405
             )
 
+    @csrf_exempt
+    def generate_sessions(request):
+        """
+        Endpoint to generate sessions for properties based on props.json configuration.
+        """
+        if request.method == "POST":
+            try:
+                # Call the service function to generate sessions
+                CookieSession.generate_sessions()
+                return JsonResponse(
+                    {"message": "Sessions generated successfully."}, status=200
+                )
+            except Exception as e:
+                return JsonResponse({"error": str(e)}, status=500)
+        else:
+            return JsonResponse(
+                {"error": "Invalid request method. Only POST is allowed."},
+                status=405,
+            )
+
     # @csrf_exempt
     # def download_cookies_as_file(request):
     #     """

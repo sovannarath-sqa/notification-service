@@ -1,16 +1,16 @@
 {
   "properties": [
     {
-      "name": "chitose",
-      "username": "chitose_user",
-      "password": "password123",
-      "otas": ["airbnb", "rakuten"]
+      "name": "theatelh",
+      "otas": ["airbnb", "rakuten", "agoda"]
     },
     {
-      "name": "sapporo",
-      "username": "sapporo_user",
-      "password": "secure456",
-      "otas": ["agoda"]
+      "name": "guest-kamata@minn.asia",
+      "otas": ["airbnb", "rakuten", "agoda"]
+    },
+    {
+      "name": "guest-haneda-airport@minn.asia",
+      "otas": ["airbnb", "rakuten", "agoda"]
     }
   ]
 }
