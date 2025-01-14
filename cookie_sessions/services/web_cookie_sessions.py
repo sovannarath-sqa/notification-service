@@ -207,21 +207,30 @@ class CookieSession:
             )
             raise
 
-    def generate_sessions(output_file="all_sessions.json"):
-
+    def generate_sessions(output_file="all_sessions.json", props_file="props.json"):
         try:
+            # Define paths for web cookies and props.json
             web_cookies_path = os.path.join(settings.BASE_DIR, "web_cookies")
+            props_file_path = os.path.join(settings.BASE_DIR, props_file)
             os.makedirs(web_cookies_path, exist_ok=True)
             output_file_path = os.path.join(web_cookies_path, output_file)
+
             print(f"[DEBUG] Output file path: {output_file_path}")
 
-            # Hardcoded OTA credentials
+            # Load properties from props.json
+            with open(props_file_path, "r") as props_file:
+                props_data = json.load(props_file)
+
+            # Hardcoded credentials for simplicity (can be replaced later)
             ota_credentials = {
                 "airbnb": {
                     "username": "guest-haneda-airport@minn.asia",
                     "password": "hpy2raq4ubq6pam-MVX",
                 },
-                "rakuten": {"username": "theatelh", "password": "theatel.12"},
+                "rakuten": {
+                    "username": "theatelh",
+                    "password": "theatel.12",
+                },
                 "agoda": {
                     "username": "guest-kamata@minn.asia",
                     "password": "Squeeze0901",
@@ -231,41 +240,55 @@ class CookieSession:
             all_sessions = {}
             detailed_results = []
 
-            for ota, credentials in ota_credentials.items():
-                result = {
-                    "channel": ota,
-                    "credential_name": credentials["username"],
-                    "status": "failed",
-                    "message": None,
-                }
+            # Iterate over properties and their OTAs
+            for property_item in props_data["properties"]:
+                property_name = property_item["name"]
+                otas = property_item["otas"]
 
-                try:
-                    print(f"Processing OTA: {ota}")
+                for ota in otas:
+                    if ota not in ota_credentials:
+                        print(f"[WARNING] No credentials found for OTA: {ota}")
+                        continue
 
-                    # Generate session using CookieSession
-                    profile = CookieSession.start_session(
-                        browser="Firefox",
-                        channel=ota,
-                        credential_name=credentials["username"],
-                        password=credentials["password"],
-                    )
+                    credentials = ota_credentials[ota]
+                    result = {
+                        "channel": ota,
+                        "property_name": property_name,
+                        "credential_name": credentials["username"],
+                        "status": "failed",
+                        "message": None,
+                    }
 
-                    if profile:
-                        print(f"[DEBUG] Profile generated for {ota}: {profile}")
+                    try:
+                        print(f"Processing OTA: {ota} for property: {property_name}")
 
-                        if ota not in all_sessions:
-                            all_sessions[ota] = []
-                        all_sessions[ota].append(profile)
+                        # Generate session using CookieSession
+                        profile = CookieSession.start_session(
+                            browser="Firefox",
+                            channel=ota,
+                            credential_name=credentials["username"],
+                            password=credentials["password"],
+                        )
 
-                        result["status"] = "success"
-                        result["message"] = f"Session generated successfully for {ota}"
-                    else:
-                        print(f"[DEBUG] No profile returned for {ota}")
-                except Exception as e:
-                    result["message"] = f"Error: {str(e)}"
-                    print(f"[ERROR] {result['message']}")
+                        if profile:
+                            print(f"[DEBUG] Profile generated for {ota}: {profile}")
 
-                detailed_results.append(result)
+                            if ota not in all_sessions:
+                                all_sessions[ota] = []
+                            all_sessions[ota].append(profile)
+
+                            result["status"] = "success"
+                            result["message"] = (
+                                f"Session generated successfully for {ota}"
+                            )
+                        else:
+                            print(f"[DEBUG] No profile returned for {ota}")
+
+                    except Exception as e:
+                        result["message"] = f"Error: {str(e)}"
+                        print(f"[ERROR] {result['message']}")
+
+                    detailed_results.append(result)
 
             # Save sessions to file
             if all_sessions:
