@@ -14,6 +14,7 @@ import pickle
 import os
 import requests
 from selenium.common.exceptions import TimeoutException
+import json
 
 
 class WebDriverInitiator:
@@ -89,39 +90,79 @@ class AutoLoginService:
         driver = driver_object.get_driver_instand()
         return driver
 
+    @staticmethod
     def load_session(driver, channel, credential_name):
+        """
+        Load a specific session from the unified JSON file.
+        """
+        file_path = AutoLoginService.get_session_file()
         session_existed = False
-        file_path = AutoLoginService.get_session_file(
-            channel=channel, credential_name=credential_name
-        )
-        print("Cookies: ", file_path)
 
         if os.path.exists(file_path):
-            existed = True
-            with open(file_path, "rb") as file:
-                load_cookies = pickle.load(file)
+            with open(file_path, "r", encoding="utf-8") as file:
+                try:
+                    all_sessions = json.load(file)
+                except json.JSONDecodeError:
+                    print(f"Invalid JSON format in {file_path}.")
+                    return session_existed
 
-            for cookie in load_cookies:
-                print("Cookie:", cookie)
-                driver.add_cookie(cookie)
+            # Retrieve the session for the specific channel and credential_name
+            session_key = f"{channel}_{credential_name}"
+            session_data = all_sessions.get(session_key)
+
+            if session_data:
+                print(f"Loading session for {session_key}")
+                for cookie in session_data.get("cookies", []):
+                    driver.add_cookie(cookie)
+                session_existed = True
+            else:
+                print(f"No session found for {session_key}")
 
         driver.refresh()
         return session_existed
 
+    @staticmethod
     def save_session(driver, channel, credential_name):
-        file_path = AutoLoginService.get_session_file(
-            channel=channel, credential_name=credential_name
-        )
-        cookies = driver.get_cookies()
-        with open(file_path, "wb") as file:
-            pickle.dump(cookies, file)
+        """
+        Save or update a session in the unified JSON file.
+        """
+        file_path = AutoLoginService.get_session_file()
+
+        # Initialize the sessions dictionary
+        all_sessions = {}
+
+        # Load existing sessions if the file exists
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as file:
+                try:
+                    all_sessions = json.load(file)
+                except json.JSONDecodeError:
+                    print(f"Invalid JSON format in {file_path}. Starting fresh.")
+                    all_sessions = {}
+
+        # Update or add the session for the given channel and credential_name
+        session_key = f"{channel}_{credential_name}"
+        all_sessions[session_key] = {
+            "channel": channel,
+            "credential_name": credential_name,
+            "cookies": driver.get_cookies(),
+        }
+
+        # Save all sessions back to the file, overwriting the previous file
+        with open(file_path, "w", encoding="utf-8") as file:
+            json.dump(all_sessions, file, indent=4)
+
+        print(f"Session for {session_key} saved successfully to {file_path}")
+        return driver
 
         return driver
 
-    def get_session_file(channel, credential_name):
-        return os.path.join(
-            settings.WEB_COOKIES_PATH, f"{channel}_{credential_name}_cookies.pkl"
-        )
+    @staticmethod
+    def get_session_file():
+        """
+        Get the file path for storing session properties.
+        """
+        return os.path.join(settings.WEB_COOKIES_PATH, "props.json")
 
     def agoda_login(browser, credential, reservations):
         print("Starting the agoda login process...")
@@ -168,12 +209,17 @@ class AutoLoginService:
         except Exception as e:
             print("Error during login:", e)
 
-        # Save session after successful login
-        driver = AutoLoginService.save_session(
-            driver=driver,
-            channel=credential.channel,
-            credential_name=credential.username,
-        )
+        # Save the session after successful login
+        try:
+            driver = AutoLoginService.save_session(
+                driver=driver,
+                channel=credential.channel,
+                credential_name=credential.username,
+            )
+            print("Session saved successfully.")
+        except Exception as e:
+            print(f"Error saving session: {e}")
+            driver.quit()
 
         try:
             wait.until(

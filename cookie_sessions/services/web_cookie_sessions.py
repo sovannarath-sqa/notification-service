@@ -158,7 +158,7 @@ class CookieSession:
                 static_url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_t_flg=heya&f_flg=RTN"
 
             return {
-                "profileData": {
+                "   ": {
                     f"{credential_name} {channel}": {
                         "name": credential_name,
                         "aos_slug": channel.lower(),

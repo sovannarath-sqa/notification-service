@@ -77,44 +77,44 @@ class CookieSessionView(View):
                 {"error": "Invalid request method. Only POST is allowed."}, status=405
             )
 
-    @csrf_exempt
-    def download_cookies_as_file(request):
-        """
-        Endpoint to get cookies as a downloadable JSON file.
-        """
-        if request.method == "POST":
-            try:
-                # Parse the request body
-                data = json.loads(request.body)
-                channel = data.get("channel")
-                credential_name = data.get("credential_name")
+    # @csrf_exempt
+    # def download_cookies_as_file(request):
+    #     """
+    #     Endpoint to get cookies as a downloadable JSON file.
+    #     """
+    #     if request.method == "POST":
+    #         try:
+    #             # Parse the request body
+    #             data = json.loads(request.body)
+    #             channel = data.get("channel")
+    #             credential_name = data.get("credential_name")
 
-                if not channel or not credential_name:
-                    return JsonResponse(
-                        {
-                            "error": "Missing required parameters: channel and credential_name"
-                        },
-                        status=400,
-                    )
+    #             if not channel or not credential_name:
+    #                 return JsonResponse(
+    #                     {
+    #                         "error": "Missing required parameters: channel and credential_name"
+    #                     },
+    #                     status=400,
+    #                 )
 
-                # Generate JSON content for the file
-                json_content = CookieSession.get_cookies_as_json_file(
-                    channel=channel, credential_name=credential_name
-                )
+    #             # Generate JSON content for the file
+    #             json_content = CookieSession.get_cookies_as_json_file(
+    #                 channel=channel, credential_name=credential_name
+    #             )
 
-                # Create response to serve JSON as a downloadable file
-                response = HttpResponse(json_content, content_type="application/json")
-                response["Content-Disposition"] = (
-                    f'attachment; filename="{channel}_{credential_name}_cookies.json"'
-                )
+    #             # Create response to serve JSON as a downloadable file
+    #             response = HttpResponse(json_content, content_type="application/json")
+    #             response["Content-Disposition"] = (
+    #                 f'attachment; filename="{channel}_{credential_name}_cookies.json"'
+    #             )
 
-                return response
+    #             return response
 
-            except FileNotFoundError as e:
-                return JsonResponse({"error": str(e)}, status=404)
-            except Exception as e:
-                return JsonResponse({"error": str(e)}, status=500)
-        else:
-            return JsonResponse(
-                {"error": "Invalid request method. Only POST is allowed."}, status=405
-            )
+    #         except FileNotFoundError as e:
+    #             return JsonResponse({"error": str(e)}, status=404)
+    #         except Exception as e:
+    #             return JsonResponse({"error": str(e)}, status=500)
+    #     else:
+    #         return JsonResponse(
+    #             {"error": "Invalid request method. Only POST is allowed."}, status=405
+    #         )

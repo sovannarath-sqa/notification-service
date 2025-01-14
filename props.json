@@ -1,0 +1,16 @@
+{
+  "properties": [
+    {
+      "name": "chitose",
+      "username": "chitose_user",
+      "password": "password123",
+      "otas": ["airbnb", "rakuten"]
+    },
+    {
+      "name": "sapporo",
+      "username": "sapporo_user",
+      "password": "secure456",
+      "otas": ["agoda"]
+    }
+  ]
+}
