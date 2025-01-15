@@ -113,6 +113,7 @@ class CookieSession:
             password_field = driver.find_element(
                 By.CSS_SELECTOR, "[name='user[password]']"
             )
+
             password_field.send_keys(password)
             form_submit2 = driver.find_element(
                 By.CSS_SELECTOR, "[data-testid='auth-form']"
