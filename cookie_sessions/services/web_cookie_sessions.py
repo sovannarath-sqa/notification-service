@@ -5,6 +5,15 @@ import os
 import pickle
 import time
 import json
+import requests
+
+
+BASE_URL = settings.OP_CONNECT_HOST
+VAULT_ID = "nubfqfqv44rnsd4w3rfuyfsu2i"
+HEADERS = {
+    "Authorization": f"Bearer {settings.OP_API_TOKEN}",
+    "Content-Type": "application/json",
+}
 
 
 class CookieSession:
@@ -17,6 +26,12 @@ class CookieSession:
             url = "https://www.airbnb.com/login"
         elif channel == "rakuten":
             url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_t_flg=heya&f_flg=RTN"
+
+        print(f"[DEBUG] Channel: {channel}, URL: {url}")
+
+        # Validate URL
+        if not url:
+            raise ValueError(f"Invalid or unsupported channel: {channel}")
 
         return CookieSession.get_session(
             browser=browser,
@@ -208,7 +223,217 @@ class CookieSession:
             )
             raise
 
-    def generate_sessions(output_file="all_sessions.json", props_file="props.json"):
+    def generate_sessions(output_file="all_sessions.json"):
+        try:
+            # Create output directory for cookies
+            web_cookies_path = os.path.join(os.getcwd(), "web_cookies")
+            os.makedirs(web_cookies_path, exist_ok=True)
+            output_file_path = os.path.join(web_cookies_path, output_file)
+
+            print(f"[DEBUG] Output file path: {output_file_path}")
+
+            # Fetch vault items
+            response = requests.get(
+                f"{BASE_URL}/v1/vaults/{VAULT_ID}/items", headers=HEADERS
+            )
+            if response.status_code != 200:
+                raise Exception(f"Failed to fetch vault items: {response.text}")
+
+            vault_items = response.json()
+            all_sessions = {}
+            detailed_results = []
+
+            for vault_item in vault_items:
+                try:
+                    item_id = vault_item["id"]
+                    item_response = requests.get(
+                        f"{BASE_URL}/v1/vaults/{VAULT_ID}/items/{item_id}",
+                        headers=HEADERS,
+                    )
+                    if item_response.status_code != 200:
+                        raise Exception(
+                            f"Failed to fetch item details: {item_response.text}"
+                        )
+
+                    item_details = item_response.json()
+
+                    # Extract credentials and website
+                    username = None
+                    password = None
+                    title = vault_item.get("title", "Unknown Title")
+                    website = None
+                    channel = None
+
+                    # Fetch username and password from fields
+                    for field in item_details.get("fields", []):
+                        if field.get("id") == "username":
+                            username = field.get("value")
+                        elif field.get("id") == "password":
+                            password = field.get("value")
+
+                    # Use additionalInformation as fallback for username
+                    if not username:
+                        username = vault_item.get("additionalInformation")
+
+                    # Get the primary website URL
+                    for url in item_details.get("urls", []):
+                        if url.get("primary", False):
+                            website = url.get("href")
+                            break
+
+                    # Validate and sanitize the website URL
+                    if website:
+                        if not website.startswith(("http://", "https://")):
+                            website = f"https://{website.strip()}"
+
+                    # Map URL to channel
+                    if website:
+                        if "airbnb.com" in website:
+                            channel = "airbnb"
+                        elif "agoda.com" in website:
+                            channel = "agoda"
+                        elif "rakuten.co.jp" in website:
+                            channel = "rakuten"
+
+                    # Skip if any required field is missing
+                    if not username or not password or not website or not channel:
+                        print(
+                            f"[WARNING] Missing required details for item: {title}. Skipping."
+                        )
+                        continue
+
+                    print(f"[INFO] Logging into {website} with username: {username}")
+                    print(f"[DEBUG] Channel: {channel}, URL: {website}")
+
+                    result = {
+                        "channel": channel,
+                        "title": title,
+                        "username": username,
+                        "status": "failed",
+                        "message": "No profile generated",
+                    }
+
+                    # Start session
+                    profile = CookieSession.start_session(
+                        browser="Firefox",
+                        channel=channel,
+                        credential_name=username,
+                        password=password,
+                    )
+
+                    if profile:
+                        if website not in all_sessions:
+                            all_sessions[website] = []
+                        all_sessions[website].append(profile)
+
+                        result["status"] = "success"
+                        result["message"] = "Session generated successfully"
+
+                    detailed_results.append(result)
+
+                except Exception as e:
+                    print(
+                        f"[ERROR] Error processing item {vault_item.get('title', 'Unknown')}: {str(e)}"
+                    )
+
+            # Save all sessions to a file
+            if all_sessions:
+                CookieSession.save_all_sessions_to_file(all_sessions, output_file_path)
+                print(f"[INFO] All sessions saved to {output_file_path}")
+            else:
+                print("[INFO] No sessions to save.")
+
+            return {
+                "message": "Sessions generated successfully.",
+                "sessions": detailed_results,
+            }
+
+        except Exception as e:
+            print(f"[ERROR] An error occurred: {e}")
+            raise
+
+    def fetch_profile_sessions(file_path="all_sessions.json"):
+        try:
+            full_path = os.path.join(settings.BASE_DIR, "web_cookies", file_path)
+            if not os.path.exists(full_path):
+                raise FileNotFoundError(f"File not found: {full_path}")
+
+            with open(full_path, "r") as file:
+                profiles = json.load(file)
+
+            formatted_profiles = {}
+
+            # Enhance each profile with additional metadata
+            for channel, sessions in profiles.items():
+                for session in sessions:
+                    credential_name = session.get("credential_name")
+                    cookies = session.get("cookies", [])
+
+                    # Default metadata based on the channel
+                    favicon_url, static_url = None, None
+
+                    if channel == "airbnb":
+                        favicon_url = "https://a0.muscache.com/airbnb/static/logotype_favicon-21cc8e6c6a2cca43f061d2dcabdf6e58.ico"
+                        static_url = "https://www.airbnb.com/hosting/messages"
+                    elif channel == "agoda":
+                        favicon_url = "https://cdn6.agoda.net/images/ycs/favicon.ico"
+                        static_url = "https://ycs.agoda.com/mldc/en-us/app/reporting/booking/55052795"
+                    elif channel == "rakuten":
+                        favicon_url = (
+                            "https://trv.r10s.com/eve/static/images/favicon.ico"
+                        )
+                        static_url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_no=182771&f_t_flg=heya&f_flg=RTN"
+
+                    # Construct the profile data
+                    profile_key = (
+                        f"{credential_name} {channel}" if credential_name else channel
+                    )
+                    profile_data = {
+                        "name": credential_name,
+                        "aos_slug": credential_name.lower(),
+                        "domain": (
+                            "https://www.airbnb.com"
+                            if channel == "airbnb"
+                            else (
+                                "https://manage.travel.rakuten.co.jp"
+                                if channel == "rakuten"
+                                else (
+                                    "https://ycs.agoda.com"
+                                    if channel == "agoda"
+                                    else cookies[0]["domain"] if cookies else None
+                                )
+                            )
+                        ),
+                        "faviconUrl": favicon_url,
+                        "localStorage": None,
+                        "otaPlatform": channel,
+                        "profileName": profile_key,
+                        "searchableText": f"{profile_key} {cookies[0]['domain'] if cookies else ''}",
+                        "staticUrl": static_url,
+                        "cookies": cookies,
+                    }
+
+                    # Add to formatted profiles
+                    if profile_key not in formatted_profiles:
+                        formatted_profiles[profile_key] = profile_data
+
+            print(
+                f"[DEBUG] Profiles fetched and formatted successfully from {full_path}"
+            )
+            return {"profileData": formatted_profiles}
+
+        except FileNotFoundError as fnfe:
+            print(f"[ERROR] {str(fnfe)}")
+            return {"error": str(fnfe)}
+        except Exception as e:
+            print(f"[ERROR] An unexpected error occurred: {str(e)}")
+            return {
+                "error": "An unexpected error occurred. Please check the logs for more details."
+            }
+
+    def generate_sessions_from_json(
+        output_file="all_sessions.json", props_file="props.json"
+    ):
         try:
             # Define paths for web cookies and props.json
             web_cookies_path = os.path.join(settings.BASE_DIR, "web_cookies")
@@ -306,82 +531,3 @@ class CookieSession:
         except Exception as e:
             print(f"[ERROR] An error occurred: {e}")
             raise
-
-    def fetch_profile_sessions(file_path="all_sessions.json"):
-        try:
-            full_path = os.path.join(settings.BASE_DIR, "web_cookies", file_path)
-            if not os.path.exists(full_path):
-                raise FileNotFoundError(f"File not found: {full_path}")
-
-            with open(full_path, "r") as file:
-                profiles = json.load(file)
-
-            formatted_profiles = {}
-
-            # Enhance each profile with additional metadata
-            for channel, sessions in profiles.items():
-                for session in sessions:
-                    credential_name = session.get("credential_name")
-                    cookies = session.get("cookies", [])
-
-                    # Default metadata based on the channel
-                    favicon_url, static_url = None, None
-
-                    if channel == "airbnb":
-                        favicon_url = "https://a0.muscache.com/airbnb/static/logotype_favicon-21cc8e6c6a2cca43f061d2dcabdf6e58.ico"
-                        static_url = "https://www.airbnb.com/hosting/messages"
-                    elif channel == "agoda":
-                        favicon_url = "https://cdn6.agoda.net/images/ycs/favicon.ico"
-                        static_url = "https://ycs.agoda.com/mldc/en-us/app/reporting/booking/55052795"
-                    elif channel == "rakuten":
-                        favicon_url = (
-                            "https://trv.r10s.com/eve/static/images/favicon.ico"
-                        )
-                        static_url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_no=182771&f_t_flg=heya&f_flg=RTN"
-
-                    # Construct the profile data
-                    profile_key = (
-                        f"{credential_name} {channel}" if credential_name else channel
-                    )
-                    profile_data = {
-                        "name": credential_name,
-                        "aos_slug": credential_name.lower(),
-                        "domain": (
-                            "https://www.airbnb.com"
-                            if channel == "airbnb"
-                            else (
-                                "https://manage.travel.rakuten.co.jp"
-                                if channel == "rakuten"
-                                else (
-                                    "https://ycs.agoda.com"
-                                    if channel == "agoda"
-                                    else cookies[0]["domain"] if cookies else None
-                                )
-                            )
-                        ),
-                        "faviconUrl": favicon_url,
-                        "localStorage": None,
-                        "otaPlatform": channel,
-                        "profileName": profile_key,
-                        "searchableText": f"{profile_key} {cookies[0]['domain'] if cookies else ''}",
-                        "staticUrl": static_url,
-                        "cookies": cookies,
-                    }
-
-                    # Add to formatted profiles
-                    if profile_key not in formatted_profiles:
-                        formatted_profiles[profile_key] = profile_data
-
-            print(
-                f"[DEBUG] Profiles fetched and formatted successfully from {full_path}"
-            )
-            return {"profileData": formatted_profiles}
-
-        except FileNotFoundError as fnfe:
-            print(f"[ERROR] {str(fnfe)}")
-            return {"error": str(fnfe)}
-        except Exception as e:
-            print(f"[ERROR] An unexpected error occurred: {str(e)}")
-            return {
-                "error": "An unexpected error occurred. Please check the logs for more details."
-            }

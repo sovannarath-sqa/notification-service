@@ -12,13 +12,19 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from decouple import config
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_COOKIES_PATH = os.path.join(BASE_DIR, "web_cookies")
-OP_CONNECT_HOST = os.getenv("OP_CONNECT_HOST")
-OP_API_TOKEN = os.getenv("OP_API_TOKEN")
-OP_SERVICE_ACCOUNT_TOKEN = os.getenv("OP_SERVICE_ACCOUNT_TOKEN")
+# OP_CONNECT_HOST = os.getenv("OP_CONNECT_HOST")
+# OP_API_TOKEN = os.getenv("OP_API_TOKEN")
+# OP_SERVICE_ACCOUNT_TOKEN = os.getenv("OP_SERVICE_ACCOUNT_TOKEN")
+# Load environment variables from the .env file
+OP_CONNECT_HOST = config("OP_CONNECT_HOST", default="")
+OP_API_TOKEN = config("OP_API_TOKEN", default="")
+# OP_SERVICE_ACCOUNT_TOKEN = config("OP_SERVICE_ACCOUNT_TOKEN", default="")
 
 
 # Quick-start development settings - unsuitable for production

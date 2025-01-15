@@ -80,6 +80,7 @@ class CookieSessionView(View):
     def generate_sessions(request):
         try:
             session_details = CookieSession.generate_sessions()
+            print(f"[DEBUG] Session details: {session_details}")
             return JsonResponse(
                 {
                     "message": "Sessions generated successfully.",
