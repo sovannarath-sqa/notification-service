@@ -231,7 +231,6 @@ class AutoLoginService:
             print("Debugging Page Source:", driver.page_source)
             raise Exception("Dynamic content not loaded.")
 
-        # Sending batch messages
         for data in reservations:
             driver.get(
                 f"https://ycs.agoda.com/mldc/en-us/app/hermes/inbox/ycs/{credential.channel}?bid={data.reservation_id}"
@@ -252,7 +251,6 @@ class AutoLoginService:
                 "textarea[data-element-name='inbox-conversation-send-message-text-area']",
             )
 
-            # Message content
             text_area.send_keys(data.message)
 
             print("Sending message ...")
@@ -291,7 +289,7 @@ class AutoLoginService:
                         (By.CSS_SELECTOR, "[data-testid='login-signup-email']")
                     )
                 )
-                email_field.clear()  # Clear any pre-filled value
+                email_field.clear()
                 email_field.send_keys(credential.username)
 
                 # Wait for the password input field and fill it
@@ -300,7 +298,7 @@ class AutoLoginService:
                         (By.CSS_SELECTOR, "[data-testid='login-signup-password']")
                     )
                 )
-                password_field.clear()  # Just in case there's any pre-filled value
+                password_field.clear()
                 password_field.send_keys(credential.password)
 
                 # Locate the login button and click it
@@ -338,7 +336,6 @@ class AutoLoginService:
                 credential_name=credential.username,
             )
 
-        # Confirm login was successful by checking for a specific element
         try:
             wait.until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "[href='/hosting']"))
@@ -357,7 +354,7 @@ class AutoLoginService:
                 f"https://www.airbnb.com/hosting/messages/{credential.channel_id}?query={data.reservation_id}"
             )
             try:
-                # Wait for the message input field and fill it
+
                 text_area = wait.until(
                     EC.presence_of_element_located((By.ID, "message_input"))
                 )

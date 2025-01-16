@@ -94,10 +94,7 @@ class CookieSession:
                 )
                 login_button.click()
 
-                # Optional: Validate login success (e.g., check for a specific element on the dashboard)
-                time.sleep(
-                    2
-                )  # Replace with WebDriverWait for specific dashboard element
+                time.sleep(2)
                 print(f"{channel} {credential_name} login successfully ...")
 
                 return CookieSession.save_session(
@@ -217,7 +214,7 @@ class CookieSession:
             json_content = json.dumps(cookie_data, indent=4)
             return json_content
         except Exception as e:
-            # Log the error if any
+
             print(
                 f"[ERROR] Failed to generate JSON file for {channel} - {credential_name}: {e}"
             )
@@ -232,6 +229,7 @@ class CookieSession:
 
             print(f"[DEBUG] Output file path: {output_file_path}")
 
+            # TODO: for each list, fetch detail
             # Fetch vault items
             response = requests.get(
                 f"{BASE_URL}/v1/vaults/{VAULT_ID}/items", headers=HEADERS
@@ -257,6 +255,7 @@ class CookieSession:
 
                     item_details = item_response.json()
 
+                    # TODO: for each detail title, find username, password and website
                     # Extract credentials and website
                     username = None
                     password = None
@@ -281,6 +280,7 @@ class CookieSession:
                             website = url.get("href")
                             break
 
+                    # TODO: get ota name by matching the website
                     # Validate and sanitize the website URL
                     if website:
                         if not website.startswith(("http://", "https://")):
@@ -313,6 +313,7 @@ class CookieSession:
                         "message": "No profile generated",
                     }
 
+                    # TODO: login to selenium based on OTA and username/pw
                     # Start session
                     profile = CookieSession.start_session(
                         browser="Firefox",
@@ -336,6 +337,7 @@ class CookieSession:
                         f"[ERROR] Error processing item {vault_item.get('title', 'Unknown')}: {str(e)}"
                     )
 
+            # TODO: Output
             # Save all sessions to a file
             if all_sessions:
                 CookieSession.save_all_sessions_to_file(all_sessions, output_file_path)
@@ -354,68 +356,105 @@ class CookieSession:
 
     def fetch_profile_sessions(file_path="all_sessions.json"):
         try:
+            # Construct the full path for the file
             full_path = os.path.join(settings.BASE_DIR, "web_cookies", file_path)
             if not os.path.exists(full_path):
                 raise FileNotFoundError(f"File not found: {full_path}")
 
+            # Load profiles from the file
             with open(full_path, "r") as file:
                 profiles = json.load(file)
 
             formatted_profiles = {}
 
-            # Enhance each profile with additional metadata
+            # Process each channel and its sessions
             for channel, sessions in profiles.items():
                 for session in sessions:
                     credential_name = session.get("credential_name")
                     cookies = session.get("cookies", [])
+                    notes = (
+                        session.get("notesPlain", "").lower()
+                        if session.get("notesPlain")
+                        else ""
+                    )
 
-                    # Default metadata based on the channel
-                    favicon_url, static_url = None, None
+                    # Default metadata values
+                    ota_platform, favicon_url, static_url, domain = (
+                        None,
+                        None,
+                        None,
+                        None,
+                    )
 
-                    if channel == "airbnb":
+                    # Determine channel and metadata based on notes
+                    if notes and "airbnb" in notes.lower():
+                        ota_platform = "airbnb"
                         favicon_url = "https://a0.muscache.com/airbnb/static/logotype_favicon-21cc8e6c6a2cca43f061d2dcabdf6e58.ico"
                         static_url = "https://www.airbnb.com/hosting/messages"
-                    elif channel == "agoda":
+                        domain = "https://www.airbnb.com"
+                    elif notes and "agoda" in notes.lower():
+                        ota_platform = "agoda"
                         favicon_url = "https://cdn6.agoda.net/images/ycs/favicon.ico"
                         static_url = "https://ycs.agoda.com/mldc/en-us/app/reporting/booking/55052795"
-                    elif channel == "rakuten":
+                        domain = "https://ycs.agoda.com"
+                    elif notes and "rakuten" in notes.lower():
+                        ota_platform = "rakuten"
                         favicon_url = (
                             "https://trv.r10s.com/eve/static/images/favicon.ico"
                         )
                         static_url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_no=182771&f_t_flg=heya&f_flg=RTN"
+                        domain = "https://manage.travel.rakuten.co.jp"
+                    # Fallback to domain-based detection if notes are missing
+                    elif cookies and any(
+                        "airbnb.com" in c.get("domain", "") for c in cookies
+                    ):
+                        ota_platform = "airbnb"
+                        favicon_url = "https://a0.muscache.com/airbnb/static/logotype_favicon-21cc8e6c6a2cca43f061d2dcabdf6e58.ico"
+                        static_url = "https://www.airbnb.com/hosting/messages"
+                        domain = "https://www.airbnb.com"
+                    elif cookies and any(
+                        "agoda.com" in c.get("domain", "") for c in cookies
+                    ):
+                        ota_platform = "agoda"
+                        favicon_url = "https://cdn6.agoda.net/images/ycs/favicon.ico"
+                        static_url = "https://ycs.agoda.com/mldc/en-us/app/reporting/booking/55052795"
+                        domain = "https://ycs.agoda.com"
+                    elif cookies and any(
+                        "rakuten.co.jp" in c.get("domain", "") for c in cookies
+                    ):
+                        ota_platform = "rakuten"
+                        favicon_url = (
+                            "https://trv.r10s.com/eve/static/images/favicon.ico"
+                        )
+                        static_url = "https://manage.travel.rakuten.co.jp/portal/inn/mp_kanri.main?f_lang=J&f_no=182771&f_t_flg=heya&f_flg=RTN"
+                        domain = "https://manage.travel.rakuten.co.jp"
+                    else:
+                        print(
+                            f"[WARNING] Unable to determine channel from notes or domain: {notes}. Skipping."
+                        )
+                        continue
 
-                    # Construct the profile data
-                    profile_key = (
-                        f"{credential_name} {channel}" if credential_name else channel
-                    )
+                    # Construct the profile key and data
+                    profile_key = f"{credential_name} {ota_platform}".strip()
                     profile_data = {
                         "name": credential_name,
-                        "aos_slug": credential_name.lower(),
-                        "domain": (
-                            "https://www.airbnb.com"
-                            if channel == "airbnb"
-                            else (
-                                "https://manage.travel.rakuten.co.jp"
-                                if channel == "rakuten"
-                                else (
-                                    "https://ycs.agoda.com"
-                                    if channel == "agoda"
-                                    else cookies[0]["domain"] if cookies else None
-                                )
-                            )
+                        "aos_slug": (
+                            credential_name.lower().replace(" ", "_")
+                            if credential_name
+                            else None
                         ),
+                        "domain": domain or (cookies[0]["domain"] if cookies else None),
                         "faviconUrl": favicon_url,
                         "localStorage": None,
-                        "otaPlatform": channel,
+                        "otaPlatform": ota_platform,
                         "profileName": profile_key,
-                        "searchableText": f"{profile_key} {cookies[0]['domain'] if cookies else ''}",
+                        "searchableText": f"{profile_key} {domain or ''}",
                         "staticUrl": static_url,
                         "cookies": cookies,
                     }
 
-                    # Add to formatted profiles
-                    if profile_key not in formatted_profiles:
-                        formatted_profiles[profile_key] = profile_data
+                    # Add profile data to the formatted profiles dictionary
+                    formatted_profiles[profile_key] = profile_data
 
             print(
                 f"[DEBUG] Profiles fetched and formatted successfully from {full_path}"
